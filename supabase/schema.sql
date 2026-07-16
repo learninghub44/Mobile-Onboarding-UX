@@ -55,13 +55,59 @@ create table if not exists public.organization_members (
   id                  uuid primary key default gen_random_uuid(),
   org_id              uuid not null references public.organizations on delete cascade,
   user_id             uuid not null references auth.users on delete cascade,
-  role                text not null default 'member',   -- admin|treasurer|secretary|member
-  status              text not null default 'active',   -- active|inactive|pending
-  contribution_status text not null default 'up_to_date', -- up_to_date|behind|ahead
+  role                text not null default 'member'
+                        check (role in ('admin', 'treasurer', 'secretary', 'member')),
+  status              text not null default 'active'
+                        check (status in ('active', 'inactive', 'pending')),
+  contribution_status text not null default 'up_to_date'
+                        check (contribution_status in ('up_to_date', 'behind', 'ahead')),
   total_contributions bigint not null default 0,
   joined_at           timestamptz not null default now(),
   unique (org_id, user_id)
 );
+
+-- Backfill constraints for tables created before this change (create table
+-- if not exists above won't retrofit an already-existing table). Any row
+-- with a value outside the allowed set is coerced to a safe default first
+-- so the constraint can actually be added.
+update public.organization_members
+  set role = 'member'
+  where role not in ('admin', 'treasurer', 'secretary', 'member');
+
+update public.organization_members
+  set status = 'active'
+  where status not in ('active', 'inactive', 'pending');
+
+update public.organization_members
+  set contribution_status = 'up_to_date'
+  where contribution_status not in ('up_to_date', 'behind', 'ahead');
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint where conname = 'organization_members_role_check'
+  ) then
+    alter table public.organization_members
+      add constraint organization_members_role_check
+      check (role in ('admin', 'treasurer', 'secretary', 'member'));
+  end if;
+
+  if not exists (
+    select 1 from pg_constraint where conname = 'organization_members_status_check'
+  ) then
+    alter table public.organization_members
+      add constraint organization_members_status_check
+      check (status in ('active', 'inactive', 'pending'));
+  end if;
+
+  if not exists (
+    select 1 from pg_constraint where conname = 'organization_members_contribution_status_check'
+  ) then
+    alter table public.organization_members
+      add constraint organization_members_contribution_status_check
+      check (contribution_status in ('up_to_date', 'behind', 'ahead'));
+  end if;
+end $$;
 
 alter table public.organization_members enable row level security;
 create policy "Members can view their own membership"
