@@ -17,13 +17,11 @@ import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColors } from '@/hooks/useColors';
 import { useApp } from '@/context/AppContext';
+import { ErrorState } from '@/components/ui/ErrorState';
 import { chatWithGroq, type ChatMessage } from '@/lib/groq';
-import {
-  TRANSACTIONS,
-  LOANS,
-  MEETINGS,
-  formatCurrency,
-} from '@/data/mockData';
+import { useOrgQuery } from '@/lib/useOrgQuery';
+import { getTransactions, getLoans, getUpcomingMeeting } from '@/lib/queries';
+import { formatCurrency } from '@/lib/format';
 import type { Organization } from '@/context/AppContext';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -37,24 +35,23 @@ interface Message {
 
 // ─── System prompt builder ────────────────────────────────────────────────────
 
-function buildSystemPrompt(org: Organization): string {
-  const txLines = TRANSACTIONS.slice(0, 6)
+function buildSystemPrompt(org: Organization, recentTransactions: any[], loans: any[], upcomingMeeting: any | null): string {
+  const txLines = recentTransactions.slice(0, 6)
     .map(
       t =>
-        `  ${t.date}: ${t.title} — ${t.amount < 0 ? '' : '+'}${formatCurrency(t.amount, t.currencySymbol, t.currency)} (${t.type})`,
+        `  ${new Date(t.created_at).toLocaleDateString('en-KE')}: ${t.title} — ${formatCurrency(t.amount, org.currencySymbol, org.currency)} (${t.type})`,
     )
     .join('\n');
 
-  const loanLines = LOANS.map(
+  const loanLines = loans.map(
     l =>
-      `  ${l.memberName}: ${formatCurrency(l.amount, l.currencySymbol, l.currency)} disbursed, ` +
-      `${formatCurrency(l.balance, l.currencySymbol, l.currency)} remaining, ` +
-      `${Math.round(l.progress * 100)}% repaid — ${l.status}`,
+      `  Member ${l.member_id}: ${formatCurrency(l.amount, org.currencySymbol, org.currency)} disbursed, ` +
+      `${formatCurrency(l.balance, org.currencySymbol, org.currency)} remaining, ${l.status}`,
   ).join('\n');
 
-  const meetingLines = MEETINGS.filter(m => m.status === 'upcoming')
-    .map(m => `  ${m.title} — ${m.date} at ${m.time}, ${m.location}`)
-    .join('\n');
+  const meetingLines = upcomingMeeting
+    ? `  ${upcomingMeeting.title} — ${new Date(upcomingMeeting.scheduled_at).toLocaleDateString('en-KE', { month: 'short', day: 'numeric' })} at ${new Date(upcomingMeeting.scheduled_at).toLocaleTimeString('en-KE', { hour: '2-digit', minute: '2-digit' })}, ${upcomingMeeting.location}`
+    : '  No upcoming meetings scheduled';
 
   const today = new Date().toLocaleDateString('en-KE', {
     weekday: 'long',
@@ -63,7 +60,7 @@ function buildSystemPrompt(org: Organization): string {
     day: 'numeric',
   });
 
-  return `You are a financial AI assistant for CHAMA-HUB X, helping leaders of African savings groups (Chamas and SACCOs) make informed financial decisions.
+  return `You are a financial AI assistant for ChamaYetu, helping leaders of African savings groups (Chamas and SACCOs) make informed financial decisions.
 
 ORGANIZATION: ${org.name}
 Type: ${org.type}
@@ -74,10 +71,10 @@ Total Contributions: ${formatCurrency(org.totalContributions, org.currencySymbol
 Outstanding Loans: ${formatCurrency(org.totalLoans, org.currencySymbol, org.currency)}
 
 RECENT TRANSACTIONS:
-${txLines}
+${txLines || '  No recent transactions'}
 
 ACTIVE LOANS:
-${loanLines}
+${loanLines || '  No active loans'}
 
 UPCOMING MEETINGS:
 ${meetingLines}
@@ -204,14 +201,14 @@ const WELCOME_MSG: Message = {
   id: 'welcome',
   role: 'assistant',
   content:
-    "Hello! I'm your CHAMA-HUB AI assistant, powered by Groq. I have full context of your organization — contributions, loans, members, and meetings.\n\nHow can I help you today?",
+    "Hello! I'm your ChamaYetu AI assistant, powered by Groq. I have full context of your organization — contributions, loans, members, and meetings.\n\nHow can I help you today?",
   timestamp: new Date(),
 };
 
 export default function AIScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { currentOrg } = useApp();
+  const { currentOrg, orgsError, clearOrgsError } = useApp();
   const [messages, setMessages] = useState<Message[]>([WELCOME_MSG]);
   // Conversation history sent to Groq (does not include welcome msg)
   const conversationRef = useRef<ChatMessage[]>([]);
@@ -223,6 +220,38 @@ export default function AIScreen() {
 
   const topPad = Platform.OS === 'web' ? 67 : insets.top;
   const showSuggestions = messages.length === 1;
+
+  const { data: recentTransactions = [] } = useOrgQuery(
+    ['ai-recent-transactions'],
+    (orgId) => getTransactions(orgId, { limit: 6 })
+  );
+  const { data: loans = [] } = useOrgQuery(
+    ['ai-loans'],
+    (orgId) => getLoans(orgId)
+  );
+  const { data: upcomingMeeting } = useOrgQuery(
+    ['ai-upcoming-meeting'],
+    (orgId) => getUpcomingMeeting(orgId)
+  );
+
+  if (orgsError) {
+    return (
+      <View style={[styles.root, { backgroundColor: colors.background }]}> 
+        <View style={styles.errorStateWrap}>
+          <ErrorState
+            title="Couldn’t load your organization context"
+            description={orgsError}
+            actionLabel="Retry"
+            onAction={clearOrgsError}
+          />
+        </View>
+      </View>
+    );
+  }
+
+  if (!currentOrg) {
+    return null;
+  }
 
   const sendMessage = useCallback(
     async (text: string) => {
@@ -254,7 +283,7 @@ export default function AIScreen() {
       abortRef.current = ctrl;
 
       try {
-        const systemPrompt = buildSystemPrompt(currentOrg);
+        const systemPrompt = buildSystemPrompt(currentOrg, recentTransactions, loans, upcomingMeeting);
         const reply = await chatWithGroq(history, systemPrompt, ctrl.signal);
 
         const aiMsg: Message = {
@@ -282,7 +311,7 @@ export default function AIScreen() {
         abortRef.current = null;
       }
     },
-    [isThinking, currentOrg],
+    [isThinking, currentOrg, recentTransactions, loans, upcomingMeeting],
   );
 
   return (
@@ -466,6 +495,11 @@ export default function AIScreen() {
 const styles = StyleSheet.create({
   root: { flex: 1 },
   flex: { flex: 1 },
+  errorStateWrap: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+  },
   header: { paddingHorizontal: 20, paddingBottom: 16 },
   headerContent: {
     flexDirection: 'row',

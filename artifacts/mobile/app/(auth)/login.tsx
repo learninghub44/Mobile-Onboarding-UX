@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import {
+  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -12,10 +13,12 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import * as Haptics from 'expo-haptics';
 import { useColors } from '@/hooks/useColors';
 import { useApp } from '@/context/AppContext';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { supabase } from '@/lib/supabase';
 
 export default function LoginScreen() {
   const colors = useColors();
@@ -23,10 +26,11 @@ export default function LoginScreen() {
   const router = useRouter();
   const { login } = useApp();
 
-  const [email, setEmail] = useState('sarah@chamahub.app');
-  const [password, setPassword] = useState('password123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [resetSent, setResetSent] = useState(false);
 
   async function handleLogin() {
     if (!email.trim() || !password.trim()) {
@@ -37,7 +41,7 @@ export default function LoginScreen() {
     setLoading(true);
     try {
       await login(email.trim(), password);
-      router.replace('/(tabs)' as never);
+      // Navigation will be handled by AppContext's onAuthStateChange
     } catch {
       setError('Login failed. Please check your credentials.');
     } finally {
@@ -52,17 +56,17 @@ export default function LoginScreen() {
         colors={[colors.gradientCard, colors.gradientCardEnd]}
         style={[styles.header, { paddingTop: insets.top + 32 }]}
       >
-        <View style={styles.brandRow}>
-          <View style={styles.logoMark}>
-            <Feather name="zap" size={24} color="#FFFFFF" />
+          <View style={styles.brandRow}>
+            <View style={styles.logoMark}>
+              <Feather name="zap" size={24} color="#FFFFFF" />
+            </View>
+            <View>
+              <Text style={styles.brandName}>ChamaYetu</Text>
+              <Text style={styles.brandTagline}>by ChrisTech</Text>
+            </View>
           </View>
-          <View>
-            <Text style={styles.brandName}>CHAMA-HUB X</Text>
-            <Text style={styles.brandTagline}>Financial Management Platform</Text>
-          </View>
-        </View>
-        <Text style={styles.welcomeTitle}>Welcome back</Text>
-        <Text style={styles.welcomeSubtitle}>Sign in to your account to continue</Text>
+          <Text style={styles.welcomeTitle}>Welcome back</Text>
+          <Text style={styles.welcomeSubtitle}>Sign in to your account to continue</Text>
       </LinearGradient>
 
       <KeyboardAvoidingView
@@ -100,11 +104,33 @@ export default function LoginScreen() {
             leftIcon="lock"
           />
 
-          <Pressable onPress={() => {}} hitSlop={8}>
-            <Text style={[styles.forgotPassword, { color: colors.accent }]}>
-              Forgot your password?
-            </Text>
-          </Pressable>
+           <Pressable
+             onPress={async () => {
+               if (!email.trim()) {
+                 setError('Please enter your email address first.');
+                 return;
+               }
+               setError('');
+               setLoading(true);
+               try {
+                 const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+                   redirectTo: 'chamayetu://reset-password',
+                 });
+                 if (error) throw error;
+                 setResetSent(true);
+                 Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+               } catch (err) {
+                 setError(err instanceof Error ? err.message : 'Failed to send reset email.');
+               } finally {
+                 setLoading(false);
+               }
+             }}
+             hitSlop={8}
+           >
+             <Text style={[styles.forgotPassword, { color: colors.accent }]}>
+               Forgot your password?
+             </Text>
+           </Pressable>
 
           <Button title="Sign In" onPress={handleLogin} loading={loading} />
 
@@ -114,27 +140,57 @@ export default function LoginScreen() {
             <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
           </View>
 
-          <View style={styles.socialRow}>
-            <Pressable style={[styles.socialBtn, { borderColor: colors.border, backgroundColor: colors.card, borderRadius: colors.radius }]}>
-              <Feather name="globe" size={18} color={colors.foreground} />
-              <Text style={[styles.socialText, { color: colors.foreground }]}>Google</Text>
-            </Pressable>
-            {Platform.OS === 'ios' && (
-              <Pressable style={[styles.socialBtn, { borderColor: colors.border, backgroundColor: colors.card, borderRadius: colors.radius }]}>
-                <Feather name="smartphone" size={18} color={colors.foreground} />
-                <Text style={[styles.socialText, { color: colors.foreground }]}>Apple</Text>
-              </Pressable>
-            )}
-          </View>
+           <View style={styles.socialRow}>
+             <Pressable
+               onPress={async () => {
+                 await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                 // Note: OAuth providers must be enabled in Supabase Dashboard → Authentication → Providers
+                 const { error } = await supabase.auth.signInWithOAuth({
+                   provider: 'google',
+                   options: { redirectTo: 'chamayetu://auth/callback' },
+                 });
+                 if (error) Alert.alert('Sign In Failed', error.message);
+               }}
+               style={[styles.socialBtn, { borderColor: colors.border, backgroundColor: colors.card, borderRadius: colors.radius }]}
+             >
+               <Feather name="globe" size={18} color={colors.foreground} />
+               <Text style={[styles.socialText, { color: colors.foreground }]}>Google</Text>
+             </Pressable>
+             {Platform.OS === 'ios' && (
+               <Pressable
+                 onPress={async () => {
+                   await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                   // Note: OAuth providers must be enabled in Supabase Dashboard → Authentication → Providers
+                   const { error } = await supabase.auth.signInWithOAuth({
+                     provider: 'apple',
+                     options: { redirectTo: 'chamayetu://auth/callback' },
+                   });
+                   if (error) Alert.alert('Sign In Failed', error.message);
+                 }}
+                 style={[styles.socialBtn, { borderColor: colors.border, backgroundColor: colors.card, borderRadius: colors.radius }]}
+               >
+                 <Feather name="smartphone" size={18} color={colors.foreground} />
+                 <Text style={[styles.socialText, { color: colors.foreground }]}>Apple</Text>
+               </Pressable>
+             )}
+           </View>
 
-          <View style={styles.signupRow}>
-            <Text style={[styles.signupText, { color: colors.mutedForeground }]}>
-              Don't have an account?{' '}
-            </Text>
-            <Pressable onPress={() => router.push('/(auth)/register' as never)}>
-              <Text style={[styles.signupLink, { color: colors.accent }]}>Create account</Text>
-            </Pressable>
-          </View>
+           {resetSent && (
+             <View style={[styles.successBanner, { backgroundColor: colors.successLight, borderRadius: colors.radius }]}>
+               <Feather name="check-circle" size={14} color={colors.success} />
+               <Text style={[styles.successText, { color: colors.success }]}>
+                 Check your email for a password reset link.
+               </Text>
+             </View>
+           )}
+           <View style={styles.signupRow}>
+             <Text style={[styles.signupText, { color: colors.mutedForeground }]}>
+               Don't have an account?{' '}
+             </Text>
+             <Pressable onPress={() => router.push('/(auth)/register' as never)}>
+               <Text style={[styles.signupLink, { color: colors.accent }]}>Create account</Text>
+             </Pressable>
+           </View>
         </ScrollView>
       </KeyboardAvoidingView>
     </View>
@@ -172,9 +228,9 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   brandTagline: {
-    fontFamily: 'Inter_400Regular',
+    fontFamily: 'Inter_500Medium',
     fontSize: 11,
-    color: 'rgba(255,255,255,0.65)',
+    color: 'rgba(255,255,255,0.75)',
   },
   welcomeTitle: {
     fontFamily: 'Inter_700Bold',
@@ -235,4 +291,11 @@ const styles = StyleSheet.create({
   },
   signupText: { fontFamily: 'Inter_400Regular', fontSize: 14 },
   signupLink: { fontFamily: 'Inter_600SemiBold', fontSize: 14 },
+  successBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    gap: 8,
+  },
+  successText: { fontFamily: 'Inter_500Medium', fontSize: 13, flex: 1 },
 });

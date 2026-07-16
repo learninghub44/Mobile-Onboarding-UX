@@ -82,7 +82,8 @@ export default function RegisterScreen() {
     setLoading(true);
     try {
       await register(name.trim(), email.trim(), password);
-      router.replace('/(tabs)' as never);
+      // Navigate to profile setup
+      router.replace('/(profile-setup)' as never);
     } catch {
       setError('Registration failed. Please try again.');
     } finally {
@@ -110,12 +111,12 @@ export default function RegisterScreen() {
             <Feather name="arrow-left" size={22} color={colors.foreground} />
           </Pressable>
 
-          <View style={styles.titleBlock}>
-            <Text style={[styles.title, { color: colors.foreground }]}>Create account</Text>
-            <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
-              Join thousands of organizations managing their finances with CHAMA-HUB X
-            </Text>
-          </View>
+           <View style={styles.titleBlock}>
+             <Text style={[styles.title, { color: colors.foreground }]}>Create account</Text>
+             <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
+               Join thousands of organizations managing their finances with ChamaYetu
+             </Text>
+           </View>
 
           {error ? (
             <View style={[styles.errorBanner, { backgroundColor: colors.destructiveLight, borderRadius: colors.radius }]}>

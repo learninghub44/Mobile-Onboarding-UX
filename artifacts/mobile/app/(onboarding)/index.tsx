@@ -36,7 +36,7 @@ const SLIDES: Slide[] = [
   {
     id: '1',
     icon: 'zap',
-    title: 'Welcome to CHAMA-HUB X',
+    title: 'Welcome to ChamaYetu',
     description: 'The premium platform for managing your Chama, SACCO, and investment group with the precision of professional banking.',
     gradientColors: ['#0F2D5E', '#1B3A6B', '#2563EB'],
   },

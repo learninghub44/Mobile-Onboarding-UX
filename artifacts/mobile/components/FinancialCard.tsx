@@ -3,7 +3,7 @@ import { Platform, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Feather } from '@expo/vector-icons';
 import { useColors } from '@/hooks/useColors';
-import { formatCurrency } from '@/data/mockData';
+import { formatCurrency } from '@/lib/format';
 
 interface FinancialCardProps {
   orgName: string;

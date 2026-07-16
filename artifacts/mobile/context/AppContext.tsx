@@ -6,6 +6,7 @@ import React, {
   useRef,
   useState,
 } from 'react';
+import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
@@ -41,6 +42,7 @@ interface AppState {
   organizations: Organization[];
   currentOrg: Organization | null;
   isLoading: boolean;
+  orgsError: string | null;
 }
 
 interface AppContextType extends AppState {
@@ -49,57 +51,10 @@ interface AppContextType extends AppState {
   register: (name: string, email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   switchOrganization: (orgId: string) => void;
+  refreshOrganizations: (preferredOrgId?: string) => Promise<void>;
+  clearOrgsError: () => void;
+  hasOrganizations: () => boolean;
 }
-
-// ─── Demo fallback data ───────────────────────────────────────────────────────
-
-const DEMO_USER: User = {
-  id: 'demo',
-  name: 'Sarah Wanjiku',
-  email: 'sarah@chamahub.app',
-  phone: '+254 712 345 678',
-  role: 'admin',
-  initials: 'SW',
-};
-
-export const DEMO_ORGS: Organization[] = [
-  {
-    id: '1',
-    name: 'Umoja Investment Group',
-    type: 'Investment Group',
-    currency: 'KES',
-    currencySymbol: 'KSh',
-    balance: 1_245_000,
-    totalContributions: 960_000,
-    totalLoans: 380_000,
-    membersCount: 24,
-    color: '#1B3A6B',
-  },
-  {
-    id: '2',
-    name: 'Amani SACCO',
-    type: 'SACCO',
-    currency: 'KES',
-    currencySymbol: 'KSh',
-    balance: 3_890_000,
-    totalContributions: 2_400_000,
-    totalLoans: 820_000,
-    membersCount: 56,
-    color: '#059669',
-  },
-  {
-    id: '3',
-    name: 'Diaspora Wealth Fund',
-    type: 'Chama',
-    currency: 'USD',
-    currencySymbol: 'US$',
-    balance: 48_250,
-    totalContributions: 36_000,
-    totalLoans: 12_000,
-    membersCount: 12,
-    color: '#6366F1',
-  },
-];
 
 const ORG_COLORS = ['#1B3A6B', '#059669', '#6366F1', '#D97706', '#DC2626', '#0891B2'];
 
@@ -118,14 +73,20 @@ function buildAppUser(su: SupabaseUser): User {
   return { id: su.id, name, email: su.email ?? '', role: 'admin', initials };
 }
 
-async function fetchUserOrgs(userId: string): Promise<Organization[]> {
+async function fetchUserOrgs(userId: string): Promise<{ orgs: Organization[]; error: string | null }> {
   try {
     const { data, error } = await supabase
       .from('organization_members')
       .select('role, org:organizations(id, name, type, currency, currency_symbol)')
       .eq('user_id', userId);
 
-    if (error || !data?.length) return DEMO_ORGS;
+    if (error) {
+      return { orgs: [], error: error.message || 'Failed to fetch organizations' };
+    }
+
+    if (!data?.length) {
+      return { orgs: [], error: null };
+    }
 
     const orgs: Organization[] = await Promise.all(
       (data as any[]).map(async (row, idx) => {
@@ -170,9 +131,9 @@ async function fetchUserOrgs(userId: string): Promise<Organization[]> {
       }),
     );
 
-    return orgs;
-  } catch {
-    return DEMO_ORGS;
+    return { orgs, error: null };
+  } catch (err) {
+    return { orgs: [], error: err instanceof Error ? err.message : 'Failed to fetch organizations' };
   }
 }
 
@@ -181,6 +142,7 @@ async function fetchUserOrgs(userId: string): Promise<Organization[]> {
 const AppContext = createContext<AppContextType | null>(null);
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
+  const router = useRouter();
   const [state, setState] = useState<AppState>({
     hasSeenOnboarding: false,
     isAuthenticated: false,
@@ -188,6 +150,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     organizations: [],
     currentOrg: null,
     isLoading: true,
+    orgsError: null,
   });
 
   // Prevent double-update from onAuthStateChange firing during init
@@ -206,10 +169,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
         if (session?.user) {
           const user = buildAppUser(session.user);
-          const orgs = await fetchUserOrgs(session.user.id);
+          const { orgs, error } = await fetchUserOrgs(session.user.id);
           const savedOrgId = await AsyncStorage.getItem('currentOrgId');
           const currentOrg =
-            (savedOrgId ? orgs.find(o => o.id === savedOrgId) : null) ??
+            (savedOrgId ? orgs.find((o: Organization) => o.id === savedOrgId) : null) ??
             orgs[0] ??
             null;
           setState({
@@ -219,6 +182,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             organizations: orgs,
             currentOrg,
             isLoading: false,
+            orgsError: error,
           });
         } else {
           setState({
@@ -228,10 +192,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             organizations: [],
             currentOrg: null,
             isLoading: false,
+            orgsError: null,
           });
         }
       } catch {
-        setState(prev => ({ ...prev, isLoading: false }));
+        setState((prev: AppState) => ({ ...prev, isLoading: false }));
       } finally {
         initialized.current = true;
       }
@@ -245,16 +210,30 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (!initialized.current) return; // handled by init()
       if (session?.user) {
         const user = buildAppUser(session.user);
-        const orgs = await fetchUserOrgs(session.user.id);
-        setState(prev => ({
+        const { orgs, error } = await fetchUserOrgs(session.user.id);
+        setState((prev: AppState) => ({
           ...prev,
           isAuthenticated: true,
           user,
           organizations: orgs,
           currentOrg: orgs[0] ?? null,
+          orgsError: error,
         }));
+        
+        // Route based on org status
+        if (orgs.length === 0) {
+          // No organizations - check if profile has phone
+          const { data: profile } = await supabase.from('profiles').select('phone').eq('id', session.user.id).single();
+          if (profile?.phone) {
+            router.replace('/(org-setup)/welcome' as never);
+          } else {
+            router.replace('/(profile-setup)' as never);
+          }
+        } else {
+          router.replace('/(tabs)' as never);
+        }
       } else {
-        setState(prev => ({
+        setState((prev: AppState) => ({
           ...prev,
           isAuthenticated: false,
           user: null,
@@ -269,7 +248,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const completeOnboarding = useCallback(async () => {
     await AsyncStorage.setItem('hasSeenOnboarding', 'true');
-    setState(prev => ({ ...prev, hasSeenOnboarding: true }));
+    setState((prev: AppState) => ({ ...prev, hasSeenOnboarding: true }));
   }, []);
 
   const login = useCallback(async (email: string, password: string) => {
@@ -278,6 +257,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     // onAuthStateChange updates state once initialized
   }, []);
 
+  const hasOrganizations = useCallback(() => {
+    return state.organizations.length > 0;
+  }, [state.organizations]);
+
   const register = useCallback(async (name: string, email: string, password: string) => {
     const { data, error } = await supabase.auth.signUp({
       email,
@@ -285,13 +268,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       options: { data: { name } },
     });
     if (error) throw error;
-    // Attempt to upsert profile — fails gracefully if table not yet created
-    if (data.user) {
-      try {
-        await supabase.from('profiles').upsert({ id: data.user.id, name });
-      } catch {
-        // Table may not exist yet; auth still succeeds
-      }
+    if (!data.user) {
+      throw new Error('Registration failed. Please try again.');
+    }
+    // Profile creation is required — do not swallow failures
+    const { error: profileError } = await supabase.from('profiles').upsert({ id: data.user.id, name });
+    if (profileError) {
+      // If profile creation fails, sign out the user to avoid orphaned auth accounts
+      await supabase.auth.signOut();
+      throw new Error('Failed to create profile. Please try again.');
     }
   }, []);
 
@@ -299,20 +284,47 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     await Promise.all([supabase.auth.signOut(), AsyncStorage.removeItem('currentOrgId')]);
   }, []);
 
+  const refreshOrganizations = useCallback(async (preferredOrgId?: string) => {
+    if (!state.user?.id) return;
+
+    const { orgs, error } = await fetchUserOrgs(state.user.id);
+    const savedOrgId = await AsyncStorage.getItem('currentOrgId');
+    const currentOrg =
+      (preferredOrgId ? orgs.find((o: Organization) => o.id === preferredOrgId) : null) ??
+      (savedOrgId ? orgs.find((o: Organization) => o.id === savedOrgId) : null) ??
+      orgs[0] ??
+      null;
+
+    if (currentOrg) {
+      await AsyncStorage.setItem('currentOrgId', currentOrg.id);
+    }
+
+    setState((prev: AppState) => ({
+      ...prev,
+      organizations: orgs,
+      currentOrg,
+      orgsError: error,
+    }));
+  }, [state.user?.id]);
+
   const switchOrganization = useCallback(
     (orgId: string) => {
-      const org = state.organizations.find(o => o.id === orgId);
+      const org = state.organizations.find((o: Organization) => o.id === orgId);
       if (org) {
         AsyncStorage.setItem('currentOrgId', orgId).catch(() => {});
-        setState(prev => ({ ...prev, currentOrg: org }));
+        setState((prev: AppState) => ({ ...prev, currentOrg: org }));
       }
     },
     [state.organizations],
   );
 
+  const clearOrgsError = useCallback(() => {
+    setState((prev: AppState) => ({ ...prev, orgsError: null }));
+  }, []);
+
   return (
     <AppContext.Provider
-      value={{ ...state, completeOnboarding, login, register, logout, switchOrganization }}
+      value={{ ...state, completeOnboarding, login, register, logout, switchOrganization, refreshOrganizations, clearOrgsError, hasOrganizations }}
     >
       {children}
     </AppContext.Provider>

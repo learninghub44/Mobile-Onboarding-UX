@@ -11,11 +11,16 @@ import {
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import { useColors } from '@/hooks/useColors';
 import { useApp } from '@/context/AppContext';
 import { MemberCard } from '@/components/MemberCard';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { MEMBERS, Member } from '@/data/mockData';
+import { ErrorState } from '@/components/ui/ErrorState';
+import { SkeletonCard, SkeletonCircle, SkeletonText } from '@/components/SkeletonLoader';
+import { useOrgQuery } from '@/lib/useOrgQuery';
+import { getOrgMembers } from '@/lib/queries';
+import type { Member } from '@/lib/queries';
 
 type Filter = 'all' | 'active' | 'pending' | 'admin';
 const FILTERS: { key: Filter; label: string }[] = [
@@ -28,14 +33,20 @@ const FILTERS: { key: Filter; label: string }[] = [
 export default function MembersScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const { currentOrg } = useApp();
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<Filter>('all');
 
   const topPad = Platform.OS === 'web' ? 67 : insets.top;
 
+  const { data: members = [], isLoading: membersLoading, isError: membersError } = useOrgQuery(
+    ['members'],
+    (orgId) => getOrgMembers(orgId)
+  );
+
   const filtered = useMemo(() => {
-    let list = MEMBERS;
+    let list = members;
     if (filter === 'active') list = list.filter(m => m.status === 'active');
     else if (filter === 'pending') list = list.filter(m => m.status === 'pending');
     else if (filter === 'admin') list = list.filter(m => m.role === 'admin' || m.role === 'treasurer' || m.role === 'secretary');
@@ -46,7 +57,7 @@ export default function MembersScreen() {
       );
     }
     return list;
-  }, [search, filter]);
+  }, [members, search, filter]);
 
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
@@ -65,7 +76,7 @@ export default function MembersScreen() {
                 <Text style={[styles.title, { color: colors.foreground }]}>Members</Text>
                 <View style={[styles.countBadge, { backgroundColor: colors.primaryLight }]}>
                   <Text style={[styles.countText, { color: colors.primary }]}>
-                    {currentOrg?.membersCount ?? MEMBERS.length}
+                    {members.length}
                   </Text>
                 </View>
               </View>
@@ -127,15 +138,41 @@ export default function MembersScreen() {
           </View>
         )}
         ListEmptyComponent={
-          <View style={[styles.emptyWrapper, { backgroundColor: colors.card }]}>
-            <EmptyState
-              icon="users"
-              title="No members found"
-              description={search ? `No members match "${search}"` : 'No members in this category yet.'}
-              actionLabel={search ? 'Clear Search' : undefined}
-              onAction={search ? () => setSearch('') : undefined}
-            />
-          </View>
+          membersLoading ? (
+            <View style={styles.skeletonWrapper}>
+              {Array.from({ length: 4 }).map((_, index) => (
+                <View key={index} style={[styles.skeletonItem, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                  <View style={styles.skeletonMemberRow}>
+                    <SkeletonCircle size={42} />
+                    <View style={styles.skeletonMemberInfo}>
+                      <SkeletonText width="55%" height={14} />
+                      <SkeletonText width="40%" height={11} />
+                    </View>
+                  </View>
+                  <SkeletonCard />
+                </View>
+              ))}
+            </View>
+          ) : membersError ? (
+            <View style={[styles.emptyWrapper, { backgroundColor: colors.card }]}>
+              <ErrorState
+                title="Members could not be loaded"
+                description="Your organization member list is temporarily unavailable. Please retry."
+                actionLabel="Retry"
+                onAction={() => router.replace('/(tabs)/members' as never)} 
+              />
+            </View>
+          ) : (
+            <View style={[styles.emptyWrapper, { backgroundColor: colors.card }]}>
+              <EmptyState
+                icon="users"
+                title="No members found"
+                description={search ? `No members match "${search}"` : 'No members in this category yet.'}
+                actionLabel={search ? 'Clear Search' : undefined}
+                onAction={search ? () => setSearch('') : undefined}
+              />
+            </View>
+          )
         }
       />
     </View>
@@ -200,5 +237,24 @@ const styles = StyleSheet.create({
     marginHorizontal: 20,
     borderWidth: 1,
     borderRadius: 12,
+  },
+  skeletonWrapper: {
+    marginHorizontal: 20,
+    gap: 12,
+  },
+  skeletonItem: {
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 16,
+    gap: 12,
+  },
+  skeletonMemberRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  skeletonMemberInfo: {
+    flex: 1,
+    gap: 6,
   },
 });

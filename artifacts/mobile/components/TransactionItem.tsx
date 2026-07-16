@@ -2,12 +2,14 @@ import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useColors } from '@/hooks/useColors';
-import { Transaction, formatCurrency, formatDate } from '@/data/mockData';
+import { formatCurrency, formatDate } from '@/lib/format';
+import type { Transaction } from '@/lib/queries';
 import { Avatar } from './ui/Avatar';
 
 interface TransactionItemProps {
   transaction: Transaction;
   onPress?: () => void;
+  memberInitials?: string;
 }
 
 const TYPE_CONFIG = {
@@ -18,7 +20,7 @@ const TYPE_CONFIG = {
   expense: { icon: 'minus-circle' as const, label: 'Expense', positive: false },
 };
 
-export function TransactionItem({ transaction, onPress }: TransactionItemProps) {
+export function TransactionItem({ transaction, onPress, memberInitials = '??' }: TransactionItemProps) {
   const colors = useColors();
   const config = TYPE_CONFIG[transaction.type];
   const isPositive = config.positive && transaction.amount > 0;
@@ -37,7 +39,7 @@ export function TransactionItem({ transaction, onPress }: TransactionItemProps) 
       ]}
     >
       <Avatar
-        initials={transaction.memberInitials}
+        initials={memberInitials}
         size="md"
         color={isPositive ? colors.success : colors.destructive}
       />
@@ -49,12 +51,12 @@ export function TransactionItem({ transaction, onPress }: TransactionItemProps) 
           {transaction.description}
         </Text>
         <Text style={[styles.date, { color: colors.mutedForeground }]}>
-          {formatDate(transaction.date)}
+          {formatDate(transaction.created_at)}
         </Text>
       </View>
       <View style={styles.right}>
         <Text style={[styles.amount, { color: amountColor }]}>
-          {amountPrefix}{formatCurrency(transaction.amount, transaction.currencySymbol, transaction.currency)}
+          {amountPrefix}{formatCurrency(transaction.amount, transaction.currency_symbol, transaction.currency)}
         </Text>
         {transaction.status === 'pending' && (
           <View style={[styles.pendingDot, { backgroundColor: colors.warning }]} />

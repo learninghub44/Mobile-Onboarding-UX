@@ -1,7 +1,7 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useColors } from '@/hooks/useColors';
-import { Member } from '@/data/mockData';
+import type { Member } from '@/lib/queries';
 import { Avatar } from './ui/Avatar';
 import { Badge } from './ui/Badge';
 
@@ -18,15 +18,15 @@ const ROLE_LABELS: Record<Member['role'], string> = {
   member: 'Member',
 };
 
-const CONTRIB_CONFIG = {
-  up_to_date: { variant: 'success' as const, label: 'Up to date' },
-  behind: { variant: 'danger' as const, label: 'Behind' },
-  ahead: { variant: 'info' as const, label: 'Ahead' },
+const CONTRIB_CONFIG: Record<string, { variant: 'success' | 'danger' | 'info'; label: string }> = {
+  up_to_date: { variant: 'success', label: 'Up to date' },
+  behind: { variant: 'danger', label: 'Behind' },
+  ahead: { variant: 'info', label: 'Ahead' },
 };
 
 export function MemberCard({ member, onPress, compact = false }: MemberCardProps) {
   const colors = useColors();
-  const cs = CONTRIB_CONFIG[member.contributionStatus];
+  const cs = CONTRIB_CONFIG[member.contribution_status];
 
   return (
     <Pressable
@@ -40,7 +40,7 @@ export function MemberCard({ member, onPress, compact = false }: MemberCardProps
         },
       ]}
     >
-      <Avatar initials={member.initials} color={member.avatarColor} size="md" />
+      <Avatar initials={member.initials} color={member.avatar_color} size="md" />
       <View style={styles.info}>
         <Text style={[styles.name, { color: colors.foreground }]} numberOfLines={1}>
           {member.name}

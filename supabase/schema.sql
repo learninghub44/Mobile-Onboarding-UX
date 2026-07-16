@@ -37,6 +37,8 @@ create table if not exists public.organizations (
 );
 
 alter table public.organizations enable row level security;
+create policy "Authenticated users can create organizations"
+  on public.organizations for insert with check (created_by = auth.uid());
 -- Members of an org can view it
 create policy "Org members can view organization"
   on public.organizations for select using (
@@ -73,6 +75,36 @@ create policy "Admins can view all memberships in their orgs"
         and om.role in ('admin', 'treasurer')
     )
   );
+create policy "Users can insert their own membership"
+  on public.organization_members for insert with check (
+    user_id = auth.uid()
+  );
+create policy "Admins and treasurers can invite members into their org"
+  on public.organization_members for insert with check (
+    exists (
+      select 1 from public.organization_members om
+      where om.org_id = organization_members.org_id
+        and om.user_id = auth.uid()
+        and om.role in ('admin', 'treasurer')
+    )
+  );
+create policy "Admins and treasurers can update membership roles and status"
+  on public.organization_members for update using (
+    exists (
+      select 1 from public.organization_members om
+      where om.org_id = organization_members.org_id
+        and om.user_id = auth.uid()
+        and om.role in ('admin', 'treasurer')
+    )
+  )
+  with check (
+    exists (
+      select 1 from public.organization_members om
+      where om.org_id = organization_members.org_id
+        and om.user_id = auth.uid()
+        and om.role in ('admin', 'treasurer')
+    )
+  );
 
 -- ─── Transactions ─────────────────────────────────────────────
 create table if not exists public.transactions (
@@ -98,13 +130,13 @@ create policy "Org members can view transactions"
       where om.org_id = transactions.org_id and om.user_id = auth.uid()
     )
   );
-create policy "Admins and treasurers can insert transactions"
+create policy "Members can insert their own transactions"
   on public.transactions for insert with check (
-    exists (
+    member_id = auth.uid()
+    and exists (
       select 1 from public.organization_members om
       where om.org_id = transactions.org_id
         and om.user_id = auth.uid()
-        and om.role in ('admin', 'treasurer')
     )
   );
 
@@ -132,6 +164,15 @@ create policy "Org members can view loans"
       where om.org_id = loans.org_id and om.user_id = auth.uid()
     )
   );
+create policy "Members can insert loans for themselves"
+  on public.loans for insert with check (
+    member_id = auth.uid()
+    and exists (
+      select 1 from public.organization_members om
+      where om.org_id = loans.org_id
+        and om.user_id = auth.uid()
+    )
+  );
 
 -- ─── Meetings ────────────────────────────────────────────────
 create table if not exists public.meetings (
@@ -147,6 +188,13 @@ create table if not exists public.meetings (
 alter table public.meetings enable row level security;
 create policy "Org members can view meetings"
   on public.meetings for select using (
+    exists (
+      select 1 from public.organization_members om
+      where om.org_id = meetings.org_id and om.user_id = auth.uid()
+    )
+  );
+create policy "Org members can insert meetings"
+  on public.meetings for insert with check (
     exists (
       select 1 from public.organization_members om
       where om.org_id = meetings.org_id and om.user_id = auth.uid()

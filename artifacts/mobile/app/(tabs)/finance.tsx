@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   FlatList,
   Platform,
@@ -11,18 +11,18 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import { useColors } from '@/hooks/useColors';
 import { useApp } from '@/context/AppContext';
 import { TransactionItem } from '@/components/TransactionItem';
 import { MiniChart } from '@/components/MiniChart';
-import {
-  TRANSACTIONS,
-  LOANS,
-  MONTHLY_CONTRIBUTIONS,
-  Transaction,
-  Loan,
-  formatCurrency,
-} from '@/data/mockData';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { ErrorState } from '@/components/ui/ErrorState';
+import { SkeletonCard, SkeletonCircle, SkeletonText } from '@/components/SkeletonLoader';
+import { useOrgQuery } from '@/lib/useOrgQuery';
+import { getTransactions, getLoans } from '@/lib/queries';
+import { formatCurrency } from '@/lib/format';
+import type { Transaction, Loan } from '@/lib/queries';
 
 type TabKey = 'all' | 'contributions' | 'loans' | 'expenses';
 
@@ -41,25 +41,25 @@ function LoanCard({ loan }: { loan: Loan }) {
     <View style={[styles.loanCard, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius }]}>
       <View style={styles.loanHeader}>
         <View>
-          <Text style={[styles.loanMember, { color: colors.foreground }]}>{loan.memberName}</Text>
+          <Text style={[styles.loanMember, { color: colors.foreground }]}>Member {loan.member_id}</Text>
           <Text style={[styles.loanMeta, { color: colors.mutedForeground }]}>
-            {loan.interestRate}% interest · Due {loan.dueDate}
+            {loan.interest_rate}% interest · Due {loan.due_date}
           </Text>
         </View>
         <View>
           <Text style={[styles.loanAmount, { color: colors.foreground }]}>
-            {formatCurrency(loan.amount, loan.currencySymbol, loan.currency)}
+            {formatCurrency(loan.amount, 'KES', 'KES')}
           </Text>
           <Text style={[styles.loanBalance, { color: statusColor }]}>
-            {formatCurrency(loan.balance, loan.currencySymbol, loan.currency)} remaining
+            {formatCurrency(loan.balance, 'KES', 'KES')} remaining
           </Text>
         </View>
       </View>
       <View style={[styles.loanTrack, { backgroundColor: colors.muted }]}>
-        <View style={[styles.loanProgress, { width: `${loan.progress * 100}%`, backgroundColor: statusColor }]} />
+        <View style={[styles.loanProgress, { width: '0%', backgroundColor: statusColor }]} />
       </View>
       <Text style={[styles.loanPercent, { color: colors.mutedForeground }]}>
-        {Math.round(loan.progress * 100)}% repaid
+        0% repaid
       </Text>
     </View>
   );
@@ -68,6 +68,7 @@ function LoanCard({ loan }: { loan: Loan }) {
 export default function FinanceScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const { currentOrg } = useApp();
   const [activeTab, setActiveTab] = useState<TabKey>('all');
 
@@ -75,7 +76,16 @@ export default function FinanceScreen() {
 
   const topPad = Platform.OS === 'web' ? 67 : insets.top;
 
-  const filteredTransactions = TRANSACTIONS.filter(t => {
+  const { data: transactions = [], isLoading: txLoading, isError: txError } = useOrgQuery(
+    ['transactions'],
+    (orgId) => getTransactions(orgId)
+  );
+  const { data: loans = [], isLoading: loansLoading, isError: loansError } = useOrgQuery(
+    ['loans'],
+    (orgId) => getLoans(orgId)
+  );
+
+  const filteredTransactions = transactions.filter(t => {
     if (activeTab === 'all') return true;
     if (activeTab === 'contributions') return t.type === 'contribution' || t.type === 'repayment';
     if (activeTab === 'loans') return t.type === 'loan';
@@ -85,10 +95,30 @@ export default function FinanceScreen() {
 
   const showLoanCards = activeTab === 'loans';
 
+  // Compute monthly contributions from last 6 months of transactions
+  const monthlyContributions = useMemo(() => {
+    const now = new Date();
+    const months: { label: string; amount: number }[] = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const label = d.toLocaleDateString('en-KE', { month: 'short' });
+      const monthStart = new Date(d.getFullYear(), d.getMonth(), 1).toISOString();
+      const monthEnd = new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59).toISOString();
+      const amount = transactions
+        .filter(t => {
+          const created = new Date(t.created_at);
+          return t.type === 'contribution' && created >= new Date(monthStart) && created <= new Date(monthEnd);
+        })
+        .reduce((sum, t) => sum + t.amount, 0);
+      months.push({ label, amount });
+    }
+    return months;
+  }, [transactions]);
+
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
       <FlatList
-        data={showLoanCards ? LOANS : filteredTransactions}
+        data={showLoanCards ? loans : filteredTransactions}
         keyExtractor={item => item.id}
         contentInsetAdjustmentBehavior="automatic"
         showsVerticalScrollIndicator={false}
@@ -126,7 +156,7 @@ export default function FinanceScreen() {
             {/* Chart */}
             <View style={[styles.chartSection, { backgroundColor: colors.card, borderColor: colors.border }]}>
               <Text style={[styles.chartTitle, { color: colors.foreground }]}>Monthly Contributions</Text>
-              <MiniChart data={MONTHLY_CONTRIBUTIONS} highlightColor={colors.accent} />
+              <MiniChart data={monthlyContributions.map(m => ({ month: m.label, amount: m.amount }))} highlightColor={colors.accent} />
             </View>
 
             {/* Tabs */}
@@ -173,6 +203,39 @@ export default function FinanceScreen() {
             </View>
           );
         }}
+        ListEmptyComponent={
+          txLoading || loansLoading ? (
+            <View style={styles.skeletonList}>
+              {Array.from({ length: 3 }).map((_, index) => (
+                <View key={index} style={[styles.skeletonCard, { backgroundColor: colors.card, borderColor: colors.border }]}> 
+                  <View style={styles.skeletonHeader}>
+                    <SkeletonCircle size={40} />
+                    <View style={styles.skeletonContent}>
+                      <SkeletonText width="55%" height={14} />
+                      <SkeletonText width="40%" height={11} />
+                    </View>
+                  </View>
+                  <SkeletonCard />
+                </View>
+              ))}
+            </View>
+          ) : txError || loansError ? (
+            <View style={styles.errorWrap}>
+              <ErrorState
+                title="Finance data is unavailable"
+                description="We couldn’t load your organization’s transactions or loans. Please retry to refresh the activity feed."
+                actionLabel="Retry"
+                onAction={() => router.replace('/(tabs)' as never)}
+              />
+            </View>
+          ) : (
+            <EmptyState
+              icon="activity"
+              title="No transactions yet"
+              description="Once you add a contribution or expense, it will appear here instantly."
+            />
+          )
+        }
         ItemSeparatorComponent={() =>
           showLoanCards ? null : (
             <View style={[styles.separator, { backgroundColor: colors.border }]} />
@@ -256,4 +319,29 @@ const styles = StyleSheet.create({
   loanTrack: { height: 6, borderRadius: 3, overflow: 'hidden' },
   loanProgress: { height: '100%', borderRadius: 3 },
   loanPercent: { fontFamily: 'Inter_400Regular', fontSize: 11 },
+  emptyText: { fontFamily: 'Inter_400Regular', fontSize: 14, paddingVertical: 12, textAlign: 'center' },
+  errorWrap: {
+    paddingHorizontal: 20,
+    paddingTop: 12,
+  },
+  skeletonList: {
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    gap: 12,
+  },
+  skeletonCard: {
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 16,
+    gap: 12,
+  },
+  skeletonHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  skeletonContent: {
+    flex: 1,
+    gap: 6,
+  },
 });
