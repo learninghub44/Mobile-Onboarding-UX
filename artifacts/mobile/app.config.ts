@@ -1,5 +1,9 @@
 import { ConfigContext, ExpoConfig } from 'expo/config';
-import { WEB_APP_URL } from './constants/site';
+
+// Keep in sync with constants/site.ts (WEB_APP_URL) -- the Expo config
+// loader evaluates this file standalone and can't resolve local TS
+// imports, so this value is duplicated rather than imported.
+const WEB_APP_URL = 'https://chamayetu.christech.co.ke';
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
