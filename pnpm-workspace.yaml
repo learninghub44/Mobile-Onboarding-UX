@@ -158,6 +158,13 @@ overrides:
   # drizzle-kit uses esbuild internally on an older version that's vulnerable, this overrides it
   "@esbuild-kit/esm-loader": "npm:tsx@^4.21.0"
   esbuild: "0.27.3"
+  # Force a single @types/react(-dom) version across the whole workspace.
+  # Without this, pnpm hoists two different copies (one pinned by
+  # artifacts/mobile, one from the catalog used elsewhere) and TypeScript
+  # treats their identical-looking types (e.g. React.Ref) as unrelated,
+  # causing spurious TS2322 errors in files like calendar.tsx/spinner.tsx.
+  "@types/react": ^19.2.0
+  "@types/react-dom": ^19.2.0
 
 allowBuilds:
   esbuild: true
