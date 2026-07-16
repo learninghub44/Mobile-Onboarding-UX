@@ -112,8 +112,8 @@ export default function ProfileScreen() {
     loadPreferences();
   }, []);
 
-  async function handleLogout() {
-    await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+  function handleLogout() {
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
     Alert.alert(
       'Sign Out',
       'Are you sure you want to sign out of ChamaYetu?',

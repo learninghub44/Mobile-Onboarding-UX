@@ -57,8 +57,10 @@ export function Button({
     scale.value = withSpring(1, { damping: 15, stiffness: 400 });
   }
 
-  async function handlePress() {
-    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  function handlePress() {
+    // Fire-and-forget: haptics can be unsupported/reject on web or some
+    // devices. It must never block or break the actual tap action.
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     onPress();
   }
 

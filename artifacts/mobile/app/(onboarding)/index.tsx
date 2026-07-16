@@ -114,7 +114,7 @@ export default function OnboardingScreen() {
   }
 
   async function handleNext() {
-    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     if (isLast) {
       await completeOnboarding();
       router.replace('/(auth)/login' as never);

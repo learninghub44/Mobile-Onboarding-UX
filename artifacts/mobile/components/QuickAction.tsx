@@ -27,8 +27,8 @@ export function QuickAction({ icon, label, onPress, color }: QuickActionProps) {
     transform: [{ scale: scale.value }],
   }));
 
-  async function handlePress() {
-    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  function handlePress() {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     onPress();
   }
 

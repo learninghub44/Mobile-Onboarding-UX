@@ -85,7 +85,17 @@ export default function CreateOrgScreen() {
       // Navigate to dashboard
       router.replace('/(tabs)' as never);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create organization. Please try again.');
+      // Supabase's PostgrestError/AuthError are plain objects, not
+      // `instanceof Error`, so that check alone always fell through to the
+      // generic message and hid the real cause. Pull `.message` off
+      // whatever shape the error actually is.
+      const message =
+        (err as any)?.message ||
+        (err as any)?.error_description ||
+        (typeof err === 'string' ? err : null) ||
+        'Failed to create organization. Please try again.';
+      console.error('Create organization failed:', err);
+      setError(message);
     } finally {
       setLoading(false);
     }

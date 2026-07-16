@@ -148,6 +148,18 @@ create policy "Org members can view organization"
     public.is_org_member(id)
   );
 
+-- The creator must also be able to see the org they just made, even
+-- before the organization_members row for them exists. Without this,
+-- `.insert(...).select().single()` in the create-org flow inserts the
+-- row successfully but then fails to read it back (RLS blocks the
+-- SELECT because they aren't a member yet), so org creation always
+-- appears to fail even though the row was written.
+drop policy if exists "Creator can view organization they created" on public.organizations;
+create policy "Creator can view organization they created"
+  on public.organizations for select using (
+    created_by = auth.uid()
+  );
+
 drop policy if exists "Members can view their own membership" on public.organization_members;
 create policy "Members can view their own membership"
   on public.organization_members for select using (user_id = auth.uid());

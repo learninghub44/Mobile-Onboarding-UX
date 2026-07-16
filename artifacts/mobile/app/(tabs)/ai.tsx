@@ -260,7 +260,7 @@ export default function AIScreen() {
       const trimmed = text.trim();
       if (!trimmed || isThinking || !currentOrg) return;
 
-      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
       setError('');
 
       const userMsg: Message = {
