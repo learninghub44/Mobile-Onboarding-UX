@@ -51,8 +51,8 @@ export default function LoginScreen() {
     try {
       await login(email.trim(), password);
       // Navigation will be handled by AppContext's onAuthStateChange
-    } catch {
-      setError('Login failed. Please check your credentials.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Login failed. Please check your credentials.');
     } finally {
       setLoading(false);
     }
