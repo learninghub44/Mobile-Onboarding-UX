@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import {
-  Alert,
   Image,
   KeyboardAvoidingView,
   Platform,
@@ -26,8 +25,6 @@ import { WEB_APP_URL } from '@/constants/site';
 // a browser tab (Expo web) needs a real https URL on the deployed domain.
 const RESET_PASSWORD_REDIRECT =
   Platform.OS === 'web' ? `${WEB_APP_URL}/reset-password` : 'chamayetu://reset-password';
-const AUTH_CALLBACK_REDIRECT =
-  Platform.OS === 'web' ? `${WEB_APP_URL}/auth/callback` : 'chamayetu://auth/callback';
 
 export default function LoginScreen() {
   const colors = useColors();
@@ -147,47 +144,6 @@ export default function LoginScreen() {
 
           <Button title="Sign In" onPress={handleLogin} loading={loading} />
 
-          <View style={styles.divider}>
-            <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
-            <Text style={[styles.dividerText, { color: colors.mutedForeground }]}>or continue with</Text>
-            <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
-          </View>
-
-           <View style={styles.socialRow}>
-             <Pressable
-               onPress={async () => {
-                 await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                 // Note: OAuth providers must be enabled in Supabase Dashboard → Authentication → Providers
-                 const { error } = await supabase.auth.signInWithOAuth({
-                   provider: 'google',
-                   options: { redirectTo: AUTH_CALLBACK_REDIRECT },
-                 });
-                 if (error) Alert.alert('Sign In Failed', error.message);
-               }}
-               style={[styles.socialBtn, { borderColor: colors.border, backgroundColor: colors.card, borderRadius: colors.radius }]}
-             >
-               <Feather name="globe" size={18} color={colors.foreground} />
-               <Text style={[styles.socialText, { color: colors.foreground }]}>Google</Text>
-             </Pressable>
-             {Platform.OS === 'ios' && (
-               <Pressable
-                 onPress={async () => {
-                   await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                   // Note: OAuth providers must be enabled in Supabase Dashboard → Authentication → Providers
-                   const { error } = await supabase.auth.signInWithOAuth({
-                     provider: 'apple',
-                     options: { redirectTo: AUTH_CALLBACK_REDIRECT },
-                   });
-                   if (error) Alert.alert('Sign In Failed', error.message);
-                 }}
-                 style={[styles.socialBtn, { borderColor: colors.border, backgroundColor: colors.card, borderRadius: colors.radius }]}
-               >
-                 <Feather name="smartphone" size={18} color={colors.foreground} />
-                 <Text style={[styles.socialText, { color: colors.foreground }]}>Apple</Text>
-               </Pressable>
-             )}
-           </View>
-
            {resetSent && (
              <View style={[styles.successBanner, { backgroundColor: colors.successLight, borderRadius: colors.radius }]}>
                <Feather name="check-circle" size={14} color={colors.success} />
@@ -282,25 +238,6 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-end',
     marginTop: -8,
   },
-  divider: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginVertical: 4,
-  },
-  dividerLine: { flex: 1, height: 1 },
-  dividerText: { fontFamily: 'Inter_400Regular', fontSize: 13 },
-  socialRow: { flexDirection: 'row', gap: 12 },
-  socialBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 14,
-    borderWidth: 1.5,
-    gap: 8,
-  },
-  socialText: { fontFamily: 'Inter_500Medium', fontSize: 14 },
   signupRow: {
     flexDirection: 'row',
     justifyContent: 'center',
