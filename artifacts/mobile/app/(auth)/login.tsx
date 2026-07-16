@@ -20,6 +20,14 @@ import { useApp } from '@/context/AppContext';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { supabase } from '@/lib/supabase';
+import { WEB_APP_URL } from '@/constants/site';
+
+// Native builds must use the chamayetu:// scheme to reopen the app;
+// a browser tab (Expo web) needs a real https URL on the deployed domain.
+const RESET_PASSWORD_REDIRECT =
+  Platform.OS === 'web' ? `${WEB_APP_URL}/reset-password` : 'chamayetu://reset-password';
+const AUTH_CALLBACK_REDIRECT =
+  Platform.OS === 'web' ? `${WEB_APP_URL}/auth/callback` : 'chamayetu://auth/callback';
 
 export default function LoginScreen() {
   const colors = useColors();
@@ -119,7 +127,7 @@ export default function LoginScreen() {
                setLoading(true);
                try {
                  const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-                   redirectTo: 'chamayetu://reset-password',
+                   redirectTo: RESET_PASSWORD_REDIRECT,
                  });
                  if (error) throw error;
                  setResetSent(true);
@@ -152,7 +160,7 @@ export default function LoginScreen() {
                  // Note: OAuth providers must be enabled in Supabase Dashboard → Authentication → Providers
                  const { error } = await supabase.auth.signInWithOAuth({
                    provider: 'google',
-                   options: { redirectTo: 'chamayetu://auth/callback' },
+                   options: { redirectTo: AUTH_CALLBACK_REDIRECT },
                  });
                  if (error) Alert.alert('Sign In Failed', error.message);
                }}
@@ -168,7 +176,7 @@ export default function LoginScreen() {
                    // Note: OAuth providers must be enabled in Supabase Dashboard → Authentication → Providers
                    const { error } = await supabase.auth.signInWithOAuth({
                      provider: 'apple',
-                     options: { redirectTo: 'chamayetu://auth/callback' },
+                     options: { redirectTo: AUTH_CALLBACK_REDIRECT },
                    });
                    if (error) Alert.alert('Sign In Failed', error.message);
                  }}

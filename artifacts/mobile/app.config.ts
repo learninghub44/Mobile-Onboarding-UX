@@ -1,4 +1,5 @@
 import { ConfigContext, ExpoConfig } from 'expo/config';
+import { WEB_APP_URL } from './constants/site';
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
@@ -19,7 +20,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   android: {},
   web: { favicon: './assets/images/icon_2.png' },
   plugins: [
-    ['expo-router', { origin: 'https://replit.com/' }],
+    ['expo-router', { origin: WEB_APP_URL }],
     'expo-font',
     'expo-web-browser',
   ],
