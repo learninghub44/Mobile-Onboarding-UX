@@ -1,0 +1,1264 @@
+Build a mobile app# Premium Frontend, UX & Onboarding Requirements
+
+## Vision
+
+Design and build **CHAMA-HUB X** to the standard of a world-class FinTech application. Every interaction should communicate trust, professionalism, speed, and clarity. The application should feel comparable to products such as Revolut, Nubank, Monzo, Wise, Stripe Dashboard, and modern banking applications, while maintaining its own unique identity.
+
+The UI should not look like a generic React Native template. It should feel like a premium product that organizations are confident using to manage important financial records.
+
+---
+
+# Design Philosophy
+
+The experience should be:
+
+* Clean
+* Elegant
+* Professional
+* Premium
+* Fast
+* Minimal
+* Modern
+* Accessible
+* Consistent
+* Delightful
+
+Every screen should reduce cognitive load.
+
+Every interaction should feel intentional.
+
+Every animation should communicate state.
+
+Never add visual effects that reduce usability.
+
+---
+
+# Design System
+
+Create a complete reusable design system.
+
+Include:
+
+* Typography Scale
+* Color Tokens
+* Spacing System
+* Elevation System
+* Border Radius Scale
+* Shadows
+* Icon Library
+* Button Variants
+* Input Variants
+* Card Components
+* List Components
+* Bottom Sheets
+* Dialog Components
+* Toast System
+* Empty States
+* Loading Components
+* Error Components
+* Skeleton Components
+
+No screen should use hardcoded styling.
+
+Everything must use centralized design tokens.
+
+---
+
+# Theme
+
+Support
+
+* Light Theme
+* Dark Theme
+* System Theme
+
+Transitions between themes should be smooth.
+
+---
+
+# Color System
+
+Create a trustworthy financial color palette.
+
+Use:
+
+Primary
+
+Professional Blue
+
+Success
+
+Green
+
+Warning
+
+Amber
+
+Danger
+
+Red
+
+Information
+
+Indigo
+
+Neutral Grays
+
+Avoid bright, saturated colors.
+
+Use color to communicate meaning.
+
+Never rely on color alone.
+
+---
+
+# Typography
+
+Use modern fonts.
+
+Examples:
+
+Inter
+
+SF Pro
+
+Geist
+
+Manrope
+
+Typography hierarchy should be extremely clear.
+
+Every screen should have:
+
+Large Headlines
+
+Section Titles
+
+Body Text
+
+Captions
+
+Labels
+
+Buttons
+
+Financial Numbers
+
+Use tabular numbers for financial values.
+
+---
+
+# Components
+
+Every component must be reusable.
+
+Create components for:
+
+Buttons
+
+Cards
+
+Financial Cards
+
+Profile Cards
+
+Member Cards
+
+Transaction Cards
+
+Loan Cards
+
+Contribution Cards
+
+Statistic Cards
+
+Charts
+
+Search Bars
+
+Segmented Controls
+
+Bottom Navigation
+
+Floating Action Buttons
+
+Modal Sheets
+
+Confirmation Dialogs
+
+Date Pickers
+
+Currency Pickers
+
+Organization Picker
+
+Loading Indicators
+
+Success Screens
+
+Error Screens
+
+Empty Screens
+
+Permission Screens
+
+Offline Screens
+
+No duplicated components.
+
+---
+
+# Navigation
+
+Use Expo Router.
+
+Support:
+
+Bottom Navigation
+
+Stack Navigation
+
+Modal Navigation
+
+Deep Linking
+
+Organization Switching
+
+Authentication Routing
+
+Protected Routes
+
+Navigation should always feel predictable.
+
+---
+
+# Premium Onboarding
+
+The onboarding experience should immediately communicate trust and value.
+
+Flow:
+
+Splash Screen
+
+↓
+
+Animated Brand Reveal
+
+↓
+
+Welcome
+
+↓
+
+Feature Introduction
+
+↓
+
+Security & Privacy
+
+↓
+
+Offline Support
+
+↓
+
+Multi-Organization Support
+
+↓
+
+AI Assistant Introduction
+
+↓
+
+Notifications
+
+↓
+
+Get Started
+
+↓
+
+Authentication
+
+↓
+
+Profile Setup
+
+↓
+
+Create Organization
+
+OR
+
+Join Organization
+
+↓
+
+Organization Setup Wizard
+
+↓
+
+Dashboard
+
+The onboarding should feel premium, interactive, and never overwhelming.
+
+---
+
+# Onboarding Experience
+
+Include:
+
+Smooth animations
+
+Progress indicator
+
+Illustrations
+
+Interactive cards
+
+Skip option
+
+Back navigation
+
+Resume capability
+
+Accessibility support
+
+Clear explanations
+
+Every page should explain one concept only.
+
+---
+
+# Organization Setup Wizard
+
+Guide users through:
+
+Organization Name
+
+Organization Type
+
+Country
+
+Default Currency
+
+Timezone
+
+Logo Upload
+
+Description
+
+Contribution Schedule
+
+Meeting Schedule
+
+Role Assignment
+
+Invitation of First Members
+
+Completion Summary
+
+Celebrate successful setup with a beautiful success screen.
+
+---
+
+# Authentication Experience
+
+Provide a premium authentication flow.
+
+Features:
+
+Email Login
+
+Google Login
+
+Apple Login (iOS)
+
+Forgot Password
+
+Email Verification
+
+Password Strength Meter
+
+Secure Password Requirements
+
+Remember Me
+
+Biometric Authentication (future-ready)
+
+Clear loading states
+
+Friendly error handling
+
+Smooth transitions
+
+---
+
+# Dashboard
+
+Every dashboard should feel alive.
+
+Display:
+
+Organization Summary
+
+Financial Snapshot
+
+Contribution Progress
+
+Recent Activity
+
+Upcoming Meetings
+
+Recent Announcements
+
+Quick Actions
+
+AI Insights
+
+Pending Tasks
+
+Notifications
+
+Weather (optional)
+
+Greeting based on time of day
+
+Recent Members
+
+Performance Charts
+
+Everything important should be visible within seconds.
+
+---
+
+# Financial Experience
+
+Financial screens should resemble modern banking applications.
+
+Use:
+
+Large balances
+
+Beautiful summary cards
+
+Monthly trends
+
+Progress charts
+
+Transaction timelines
+
+Contribution history
+
+Loan status cards
+
+Payment method indicators
+
+Currency formatting
+
+Members should instantly understand their financial position.
+
+---
+
+# Animations
+
+Use animations intentionally.
+
+Include:
+
+Screen transitions
+
+Button feedback
+
+Page transitions
+
+Card animations
+
+Pull-to-refresh
+
+Success animations
+
+Loading animations
+
+Charts
+
+Counters
+
+Expandable cards
+
+Bottom sheet transitions
+
+Confetti only for meaningful achievements.
+
+Never slow down the experience.
+
+---
+
+# Charts
+
+Support beautiful analytics.
+
+Examples:
+
+Contribution Trends
+
+Loan Distribution
+
+Expense Breakdown
+
+Income Breakdown
+
+Attendance
+
+Growth
+
+Savings
+
+Organization Activity
+
+Charts should support:
+
+Dark mode
+
+Touch interaction
+
+Filtering
+
+Exporting
+
+---
+
+# Search Experience
+
+Global search should feel instant.
+
+Support:
+
+Members
+
+Transactions
+
+Meetings
+
+Loans
+
+Reports
+
+Announcements
+
+Organizations
+
+Use intelligent suggestions.
+
+Provide recent searches.
+
+---
+
+# Loading Experience
+
+Never show blank screens.
+
+Use:
+
+Skeleton Loaders
+
+Shimmer Effects
+
+Progress Indicators
+
+Optimistic Updates
+
+Background Sync
+
+Meaningful loading messages
+
+---
+
+# Empty States
+
+Every empty state should include:
+
+Illustration
+
+Explanation
+
+Primary Action
+
+Secondary Action
+
+Helpful Tips
+
+Never display empty tables without guidance.
+
+---
+
+# Error Experience
+
+Every error should:
+
+Explain the issue clearly.
+
+Avoid technical language.
+
+Suggest how to recover.
+
+Offer Retry.
+
+Offer Contact Support when appropriate.
+
+Examples:
+
+No Internet
+
+Permission Denied
+
+Session Expired
+
+Organization Not Found
+
+Server Error
+
+Validation Error
+
+Synchronization Failed
+
+Unexpected Error
+
+Errors should build confidence, not frustration.
+
+---
+
+# Accessibility
+
+Support:
+
+Large Text
+
+VoiceOver
+
+TalkBack
+
+High Contrast
+
+Reduced Motion
+
+Keyboard Navigation
+
+Meaningful Labels
+
+Proper Focus Order
+
+Touch Targets ≥ 44px
+
+WCAG-compliant color contrast
+
+Accessibility is a requirement, not an enhancement.
+
+---
+
+# Performance
+
+Target:
+
+App launch under 2 seconds
+
+Instant navigation
+
+Minimal re-renders
+
+Lazy loading
+
+Code splitting
+
+Optimized images
+
+Virtualized lists
+
+Background synchronization
+
+Battery efficiency
+
+Low memory usage
+
+Excellent offline performance
+
+---
+
+# AI Experience
+
+The AI Assistant should feel like a built-in financial assistant.
+
+It should:
+
+Summarize reports
+
+Explain trends
+
+Draft announcements
+
+Generate meeting agendas
+
+Answer organization questions
+
+Search naturally
+
+Suggest reminders
+
+Generate professional messages
+
+AI responses should be beautifully formatted with cards, lists, charts, and action buttons where appropriate.
+
+---
+
+# Delightful Details
+
+Include subtle premium experiences such as:
+
+Welcome messages
+
+Personalized greetings
+
+Celebration screens
+
+Micro-interactions
+
+Smooth haptic feedback
+
+Success confirmations
+
+Animated counters
+
+Professional illustrations
+
+High-quality icons
+
+Elegant transitions
+
+Thoughtful spacing
+
+Contextual tips
+
+Everything should feel carefully designed rather than assembled from templates.
+
+---
+
+# Final Quality Standard
+
+The finished application should be indistinguishable from a premium commercial FinTech product.
+
+Every screen should feel intentional.
+
+Every workflow should be intuitive.
+
+Every interaction should inspire confidence.
+
+The application should become the benchmark for digital Chama, SACCO, and community organization management across Africa.# Backend Platform & Multi-Currency Requirements
+
+## Backend Platform
+
+Build CHAMA-HUB X on **Supabase** as the primary backend platform.
+
+The backend must use:
+
+* Supabase PostgreSQL
+* Supabase Authentication
+* Supabase Row Level Security (RLS)
+* Supabase Realtime
+* Supabase Storage
+* Supabase Edge Functions
+* Supabase Database Functions
+* Supabase Cron (where appropriate)
+* Supabase Vector (future AI features)
+
+The architecture should be cloud-first, secure, scalable, and designed to support thousands of organizations.
+
+---
+
+# Authentication
+
+Use Supabase Authentication.
+
+Support:
+
+* Email & Password
+* Google Sign-In
+* Apple Sign-In (iOS)
+* Password Reset
+* Email Verification
+* Session Persistence
+* Multi-device Login
+* Secure Session Refresh
+
+Every authenticated user must have a profile linked to their account.
+
+---
+
+# Database
+
+Use PostgreSQL as the single source of truth.
+
+Design normalized tables with proper foreign keys, indexes, constraints, triggers, and audit fields.
+
+Never duplicate data unnecessarily.
+
+Every important table should include:
+
+* id (UUID)
+* created_at
+* updated_at
+* created_by
+* organization_id
+* status
+* deleted_at (soft delete where appropriate)
+
+---
+
+# Multi-Tenant Architecture
+
+The application must support multiple independent organizations.
+
+Every record belongs to exactly one organization.
+
+Users may belong to multiple organizations.
+
+Switching organizations should be seamless.
+
+No organization should ever access another organization's data.
+
+Tenant isolation must be enforced using Supabase Row Level Security (RLS), not only by the client application.
+
+---
+
+# Database Schema
+
+Core tables include:
+
+* profiles
+* organizations
+* organization_members
+* roles
+* permissions
+* invitations
+* contributions
+* loans
+* repayments
+* expenses
+* income
+* investments
+* fines
+* meetings
+* attendance
+* announcements
+* notifications
+* reports
+* audit_logs
+* attachments
+* currencies
+* exchange_rates
+
+Design the schema to support future expansion without breaking compatibility.
+
+---
+
+# Multi-Currency Support
+
+The application must support multiple currencies from the first release.
+
+Never hardcode KES or any other currency.
+
+Use ISO 4217 currency codes throughout the system.
+
+Examples:
+
+* KES
+* UGX
+* TZS
+* RWF
+* BIF
+* ETB
+* NGN
+* GHS
+* ZAR
+* USD
+* EUR
+* GBP
+
+---
+
+# Organization Base Currency
+
+Each organization selects a default base currency during setup.
+
+Examples:
+
+Kenyan Chama
+
+Base Currency
+
+KES
+
+Ugandan SACCO
+
+Base Currency
+
+UGX
+
+International Investment Group
+
+Base Currency
+
+USD
+
+All dashboards, summaries, and reports default to the organization's base currency.
+
+---
+
+# Transaction Currency
+
+Each financial record must store:
+
+* Original amount
+* Original currency
+* Organization base currency
+* Exchange rate (optional)
+* Base currency equivalent (optional)
+* Exchange rate source
+* Exchange rate date
+
+This allows organizations to record transactions in multiple currencies while maintaining consistent reporting.
+
+---
+
+# Exchange Rates
+
+Support three operating modes.
+
+### Manual
+
+Organization administrators maintain exchange rates manually.
+
+### Automatic
+
+Future support for trusted exchange-rate providers through scheduled Supabase Edge Functions.
+
+### No Conversion
+
+Organizations may disable conversions and report each currency independently.
+
+---
+
+# Currency Formatting
+
+Currency formatting must be locale-aware.
+
+Display:
+
+* Symbol
+* Currency code
+* Decimal precision
+* Thousands separators
+
+Examples:
+
+KSh 25,000.00
+
+UGX 120,000
+
+US$ 250.50
+
+€1,250.75
+
+Never concatenate strings manually for currency formatting.
+
+---
+
+# Financial Reports
+
+Reports should allow users to:
+
+* View transactions in original currency
+* View converted values in the organization's base currency (when enabled)
+* Filter by currency
+* Group by currency
+* Export currency-aware PDF reports
+* Export currency-aware CSV reports
+
+Every exported report must clearly indicate the currency used.
+
+---
+
+# Audit Trail
+
+Any change affecting financial records must create an immutable audit entry.
+
+Audit records include:
+
+* User
+* Organization
+* Previous values
+* New values
+* Timestamp
+* Device information (when available)
+* Reason for change (optional)
+
+Financial history must never be silently overwritten.
+
+---
+
+# Security
+
+Use Supabase Row Level Security (RLS) on every table containing organization data.
+
+Policies must ensure:
+
+* Members only access organizations they belong to.
+* Members only view records they are authorized to see.
+* Treasurers can create and update financial records.
+* Secretaries manage meetings and announcements.
+* Administrators manage organization settings.
+* Organization owners have full administrative control.
+
+Authorization must be enforced by the database, not just the client application.
+
+---
+
+# Future Expansion
+
+Design the platform so it can later support:
+
+* Additional authentication providers
+* Additional currencies
+* Exchange-rate APIs
+* Regional tax rules
+* AI-powered financial insights using Groq
+* Multi-country deployments
+* Web administration portal
+* Public APIs
+* Third-party integrations
+
+The architecture should remain modular so new capabilities can be added without major redesign.
+# Artificial Intelligence (Groq) Integration
+
+## Vision
+
+Artificial Intelligence should be a first-class feature of CHAMA-HUB X, enhancing productivity, reducing administrative workload, and helping group leaders make informed decisions. AI must assist users while preserving privacy and never make financial decisions automatically.
+
+The application will use **Groq** as the primary AI inference provider because of its high performance, low latency, and cost efficiency. The AI layer must be designed with an abstraction so that additional providers (such as OpenAI, Anthropic, or Google Gemini) can be added in the future without changing the application architecture.
+
+---
+
+# AI Architecture
+
+Implement an AI service layer with provider abstraction.
+
+```text
+Mobile App
+      │
+AI Service Layer
+      │
+Groq API
+      │
+Large Language Model
+```
+
+All AI features must communicate through this centralized service. Never call the Groq API directly from UI components.
+
+---
+
+# AI Assistant
+
+Create an intelligent in-app assistant that understands the user's role and organization context.
+
+Examples of user requests:
+
+* "How much have I contributed this year?"
+* "Show members with outstanding loans."
+* "Summarize last month's expenses."
+* "What meetings are scheduled this month?"
+* "Generate a meeting agenda."
+* "Explain our contribution trends."
+* "Create a reminder for next week's meeting."
+
+The assistant should answer naturally while respecting user permissions.
+
+---
+
+# AI Features
+
+## Organization Insights
+
+Generate summaries such as:
+
+* Monthly contribution overview
+* Financial highlights
+* Savings growth trends
+* Loan repayment summaries
+* Meeting attendance summaries
+* Organization activity summaries
+
+---
+
+## Smart Reports
+
+Generate executive summaries for reports.
+
+Examples:
+
+* Monthly financial summary
+* Quarterly organization overview
+* Annual performance report
+* Meeting summary
+* Treasurer report
+
+Reports should be concise, professional, and easy to understand.
+
+---
+
+## Meeting Assistant
+
+AI should help leaders:
+
+* Generate meeting agendas
+* Summarize meeting minutes
+* Extract action items
+* Draft announcements
+* Draft resolutions
+* Suggest follow-up tasks
+
+---
+
+## Writing Assistant
+
+Help administrators draft:
+
+* Member announcements
+* Welcome messages
+* Invitation messages
+* Reminder messages
+* Meeting notices
+* Financial update summaries
+
+Generated content should be editable before sending.
+
+---
+
+## Financial Insights
+
+Provide descriptive analytics only.
+
+Examples:
+
+* Contribution trends
+* Savings growth
+* Outstanding loan summaries
+* Expense categories
+* Income summaries
+* Participation rates
+
+The AI must not provide investment, legal, tax, or financial advice.
+
+---
+
+## Smart Search
+
+Allow users to search naturally.
+
+Examples:
+
+* "Members who missed the last meeting"
+* "Loans issued in June"
+* "My contributions this year"
+* "Expenses over KES 10,000"
+* "Outstanding repayments"
+
+Convert natural language into secure application queries while enforcing role-based access.
+
+---
+
+## Personalized Dashboard
+
+Generate contextual insights based on the user's role.
+
+Examples:
+
+Treasurer:
+
+* Contributions awaiting recording
+* Upcoming loan repayments
+* Missing financial records
+
+Secretary:
+
+* Upcoming meetings
+* Pending minutes
+* Attendance reminders
+
+Member:
+
+* Personal contribution progress
+* Loan balance
+* Upcoming meetings
+* New announcements
+
+---
+
+## Notification Intelligence
+
+Generate smart reminders such as:
+
+* Upcoming meetings
+* Missing contribution records
+* Pending repayments
+* Inactive members
+* Upcoming report deadlines
+
+Notifications should remain informative and never become spammy.
+
+---
+
+## AI Safety
+
+The AI must never:
+
+* Modify financial records
+* Approve loans
+* Delete records
+* Change member roles
+* Override permissions
+* Execute administrative actions
+* Fabricate data
+* Reveal confidential information
+
+AI should only analyze, summarize, explain, search, and draft content. Any action that changes data must require explicit user confirmation and pass normal authorization checks.
+
+---
+
+## Privacy & Security
+
+Before sending any information to Groq:
+
+* Respect the user's role and permissions.
+* Only include the minimum data required for the request.
+* Remove unnecessary personally identifiable information where possible.
+* Never expose API keys in the client application. All Groq API requests must be proxied through a secure backend or serverless function.
+
+---
+
+## Future AI Capabilities
+
+Design the architecture to support future features such as:
+
+* Voice assistant
+* Speech-to-text meeting transcription
+* OCR for receipts and documents
+* Document summarization
+* Predictive reminders
+* Intelligent anomaly detection
+* Multi-language support
+* AI-powered onboarding assistant
+* AI-generated FAQs based on organization data
+
+The AI layer should be modular so new capabilities and providers can be added without major architectural changes.
+
+
+: 
