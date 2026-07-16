@@ -20,6 +20,7 @@ import { useApp } from '@/context/AppContext';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { chatWithGroq, type ChatMessage } from '@/lib/groq';
 import { useOrgQuery } from '@/lib/useOrgQuery';
+import { useRequireOrg } from '@/hooks/useRequireOrg';
 import { getTransactions, getLoans, getUpcomingMeeting } from '@/lib/queries';
 import { formatCurrency } from '@/lib/format';
 import type { Organization } from '@/context/AppContext';
@@ -209,6 +210,7 @@ export default function AIScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { currentOrg, orgsError, clearOrgsError } = useApp();
+  const canRenderOrg = useRequireOrg();
   const [messages, setMessages] = useState<Message[]>([WELCOME_MSG]);
   // Conversation history sent to Groq (does not include welcome msg)
   const conversationRef = useRef<ChatMessage[]>([]);
@@ -249,7 +251,7 @@ export default function AIScreen() {
     );
   }
 
-  if (!currentOrg) {
+  if (!canRenderOrg || !currentOrg) {
     return null;
   }
 

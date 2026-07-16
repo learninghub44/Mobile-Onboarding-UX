@@ -18,6 +18,7 @@ import { useRouter } from 'expo-router';
 import { useColorScheme } from 'react-native';
 import { useColors } from '@/hooks/useColors';
 import { useApp } from '@/context/AppContext';
+import { useRequireOrg } from '@/hooks/useRequireOrg';
 import { Avatar } from '@/components/ui/Avatar';
 import { Badge } from '@/components/ui/Badge';
 import { Card } from '@/components/ui/Card';
@@ -70,8 +71,9 @@ export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { user, organizations, currentOrg, switchOrganization, logout } = useApp();
+  const canRenderOrg = useRequireOrg();
 
-  if (!user || !currentOrg) return null;
+  if (!canRenderOrg || !user || !currentOrg) return null;
 
   const [editingProfile, setEditingProfile] = useState(false);
   const [name, setName] = useState(user.name);

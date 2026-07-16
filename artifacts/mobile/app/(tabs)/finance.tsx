@@ -20,6 +20,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { SkeletonCard, SkeletonCircle, SkeletonText } from '@/components/SkeletonLoader';
 import { useOrgQuery } from '@/lib/useOrgQuery';
+import { useRequireOrg } from '@/hooks/useRequireOrg';
 import { getTransactions, getLoans } from '@/lib/queries';
 import { formatCurrency } from '@/lib/format';
 import type { Transaction, Loan } from '@/lib/queries';
@@ -70,9 +71,10 @@ export default function FinanceScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { currentOrg } = useApp();
+  const canRenderOrg = useRequireOrg();
   const [activeTab, setActiveTab] = useState<TabKey>('all');
 
-  if (!currentOrg) return null;
+  if (!canRenderOrg || !currentOrg) return null;
 
   const topPad = Platform.OS === 'web' ? 67 : insets.top;
 

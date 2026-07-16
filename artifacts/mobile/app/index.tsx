@@ -5,7 +5,7 @@ import { useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
 
 export default function EntryScreen() {
-  const { hasSeenOnboarding, isAuthenticated, isLoading } = useApp();
+  const { hasSeenOnboarding, isAuthenticated, isLoading, needsProfileSetup, organizations } = useApp();
   const router = useRouter();
   const colors = useColors();
 
@@ -15,10 +15,14 @@ export default function EntryScreen() {
       router.replace('/(onboarding)');
     } else if (!isAuthenticated) {
       router.replace('/(auth)/login');
+    } else if (needsProfileSetup) {
+      router.replace('/(profile-setup)' as never);
+    } else if (organizations.length === 0) {
+      router.replace('/(org-setup)/welcome' as never);
     } else {
       router.replace('/(tabs)');
     }
-  }, [isLoading, hasSeenOnboarding, isAuthenticated, router]);
+  }, [isLoading, hasSeenOnboarding, isAuthenticated, needsProfileSetup, organizations, router]);
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center' }}>

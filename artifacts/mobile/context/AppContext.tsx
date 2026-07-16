@@ -43,6 +43,7 @@ interface AppState {
   currentOrg: Organization | null;
   isLoading: boolean;
   orgsError: string | null;
+  needsProfileSetup: boolean;
 }
 
 interface AppContextType extends AppState {
@@ -151,6 +152,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     currentOrg: null,
     isLoading: true,
     orgsError: null,
+    needsProfileSetup: false,
   });
 
   // Prevent double-update from onAuthStateChange firing during init
@@ -175,6 +177,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             (savedOrgId ? orgs.find((o: Organization) => o.id === savedOrgId) : null) ??
             orgs[0] ??
             null;
+
+          let needsProfileSetup = false;
+          if (orgs.length === 0) {
+            const { data: profile } = await supabase.from('profiles').select('phone').eq('id', session.user.id).single();
+            needsProfileSetup = !profile?.phone;
+          }
+
           setState({
             hasSeenOnboarding,
             isAuthenticated: true,
@@ -183,6 +192,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             currentOrg,
             isLoading: false,
             orgsError: error,
+            needsProfileSetup,
           });
         } else {
           setState({
@@ -193,6 +203,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             currentOrg: null,
             isLoading: false,
             orgsError: null,
+            needsProfileSetup: false,
           });
         }
       } catch {
@@ -211,6 +222,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (session?.user) {
         const user = buildAppUser(session.user);
         const { orgs, error } = await fetchUserOrgs(session.user.id);
+
+        // Route based on org status
+        let needsProfileSetup = false;
+        if (orgs.length === 0) {
+          // No organizations - check if profile has phone
+          const { data: profile } = await supabase.from('profiles').select('phone').eq('id', session.user.id).single();
+          needsProfileSetup = !profile?.phone;
+        }
+
         setState((prev: AppState) => ({
           ...prev,
           isAuthenticated: true,
@@ -218,16 +238,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           organizations: orgs,
           currentOrg: orgs[0] ?? null,
           orgsError: error,
+          needsProfileSetup,
         }));
-        
-        // Route based on org status
+
         if (orgs.length === 0) {
-          // No organizations - check if profile has phone
-          const { data: profile } = await supabase.from('profiles').select('phone').eq('id', session.user.id).single();
-          if (profile?.phone) {
-            router.replace('/(org-setup)/welcome' as never);
-          } else {
+          if (needsProfileSetup) {
             router.replace('/(profile-setup)' as never);
+          } else {
+            router.replace('/(org-setup)/welcome' as never);
           }
         } else {
           router.replace('/(tabs)' as never);
@@ -239,6 +257,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           user: null,
           organizations: [],
           currentOrg: null,
+          needsProfileSetup: false,
         }));
       }
     });

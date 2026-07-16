@@ -25,6 +25,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { SkeletonCard, SkeletonCircle, SkeletonText } from '@/components/SkeletonLoader';
 import { useOrgQuery } from '@/lib/useOrgQuery';
+import { useRequireOrg } from '@/hooks/useRequireOrg';
 import { getTransactions, getUpcomingMeeting, getOrgMembers, createTransaction } from '@/lib/queries';
 import { formatCurrency, getGreeting } from '@/lib/format';
 
@@ -33,6 +34,7 @@ export default function DashboardScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { user, currentOrg, orgsError, clearOrgsError } = useApp();
+  const canRenderOrg = useRequireOrg();
   const [showContributeModal, setShowContributeModal] = useState(false);
   const [showExpenseModal, setShowExpenseModal] = useState(false);
   const [showLoanModal, setShowLoanModal] = useState(false);
@@ -55,7 +57,7 @@ export default function DashboardScreen() {
   const greeting = getGreeting();
   const topPad = Platform.OS === 'web' ? 67 : insets.top;
 
-  if (!currentOrg || !user) return null;
+  if (!canRenderOrg || !currentOrg || !user) return null;
 
   if (orgsError) {
     return (
