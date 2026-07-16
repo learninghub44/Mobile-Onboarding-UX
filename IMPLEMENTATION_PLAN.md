@@ -1,4 +1,4 @@
-# CHAMA-HUB X — Real Data & Functionality Wiring Plan
+# ChamaYetu — Real Data & Functionality Wiring Plan
 
 **Audience:** any Claude/agent picking up this repo in a future session.
 **Goal of this doc:** replace all mock data and dead buttons in `artifacts/mobile` with real Supabase-backed functionality, in safe, independently-shippable phases. UI/screens are considered done — do not restyle unless a phase explicitly says to add a new screen.

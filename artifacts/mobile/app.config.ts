@@ -2,12 +2,12 @@ import { ConfigContext, ExpoConfig } from 'expo/config';
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
-  name: 'CHAMA-HUB X',
+  name: 'ChamaYetu',
   slug: 'mobile',
   version: '1.0.0',
   orientation: 'portrait',
   icon: './assets/images/icon_2.png',
-  scheme: 'mobile',
+  scheme: 'chamayetu',
   userInterfaceStyle: 'automatic',
   newArchEnabled: true,
   splash: {

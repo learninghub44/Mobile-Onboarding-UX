@@ -1,5 +1,5 @@
 -- ============================================================
--- CHAMA-HUB X — Supabase Schema
+-- ChamaYetu — Supabase Schema
 -- Run this in your Supabase SQL Editor:
 -- https://supabase.com/dashboard/project/<your-project>/sql
 -- ============================================================

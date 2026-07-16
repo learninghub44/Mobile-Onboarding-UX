@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import {
   Alert,
+  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -58,7 +59,11 @@ export default function LoginScreen() {
       >
           <View style={styles.brandRow}>
             <View style={styles.logoMark}>
-              <Feather name="zap" size={24} color="#FFFFFF" />
+              <Image
+                source={require('@/assets/images/icon_2.png')}
+                style={styles.logoImage}
+                resizeMode="contain"
+              />
             </View>
             <View>
               <Text style={styles.brandName}>ChamaYetu</Text>
@@ -220,6 +225,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.2)',
+    overflow: 'hidden',
+  },
+  logoImage: {
+    width: 32,
+    height: 32,
   },
   brandName: {
     fontFamily: 'Inter_700Bold',

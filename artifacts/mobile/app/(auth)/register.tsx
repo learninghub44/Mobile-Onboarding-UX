@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import {
+  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -111,6 +112,14 @@ export default function RegisterScreen() {
             <Feather name="arrow-left" size={22} color={colors.foreground} />
           </Pressable>
 
+           <View style={[styles.logoMark, { backgroundColor: colors.primary }]}>
+             <Image
+               source={require('@/assets/images/icon_2.png')}
+               style={styles.logoImage}
+               resizeMode="contain"
+             />
+           </View>
+
            <View style={styles.titleBlock}>
              <Text style={[styles.title, { color: colors.foreground }]}>Create account</Text>
              <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
@@ -184,6 +193,16 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   container: { paddingHorizontal: 24, gap: 20 },
   backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', marginLeft: -8 },
+  logoMark: {
+    width: 52,
+    height: 52,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+    marginBottom: 4,
+  },
+  logoImage: { width: 38, height: 38 },
   titleBlock: { gap: 8, marginBottom: 4 },
   title: { fontFamily: 'Inter_700Bold', fontSize: 30 },
   subtitle: { fontFamily: 'Inter_400Regular', fontSize: 15, lineHeight: 22 },

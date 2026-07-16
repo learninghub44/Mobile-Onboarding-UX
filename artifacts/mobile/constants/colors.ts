@@ -1,5 +1,5 @@
 /**
- * CHAMA-HUB X — Premium FinTech Design Tokens
+ * ChamaYetu — Premium FinTech Design Tokens
  * Professional financial color palette with full light/dark support.
  */
 
