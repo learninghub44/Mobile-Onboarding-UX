@@ -1,0 +1,3 @@
+- [Expo env var pattern](expo-env-vars.md) — EXPO_PUBLIC_ vars must be inlined via dev script, not Constants.expoConfig.extra (web bundles don't populate extra reliably).
+- [Groq security pattern](groq-security.md) — Groq API key lives on api-server; mobile app calls /api/ai/chat proxy endpoint, never holds the key.
+- [Supabase auth fallback](supabase-auth-fallback.md) — AppContext tries Supabase auth then falls back to DEMO_ORGS if tables don't exist yet; graceful until schema is applied.

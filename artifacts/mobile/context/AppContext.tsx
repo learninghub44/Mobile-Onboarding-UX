@@ -1,5 +1,16 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import type { User as SupabaseUser } from '@supabase/supabase-js';
+import { supabase } from '@/lib/supabase';
+
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface User {
   id: string;
@@ -40,10 +51,10 @@ interface AppContextType extends AppState {
   switchOrganization: (orgId: string) => void;
 }
 
-const AppContext = createContext<AppContextType | null>(null);
+// ─── Demo fallback data ───────────────────────────────────────────────────────
 
 const DEMO_USER: User = {
-  id: '1',
+  id: 'demo',
   name: 'Sarah Wanjiku',
   email: 'sarah@chamahub.app',
   phone: '+254 712 345 678',
@@ -90,6 +101,85 @@ export const DEMO_ORGS: Organization[] = [
   },
 ];
 
+const ORG_COLORS = ['#1B3A6B', '#059669', '#6366F1', '#D97706', '#DC2626', '#0891B2'];
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function buildAppUser(su: SupabaseUser): User {
+  const name: string =
+    (su.user_metadata?.name as string | undefined) ??
+    su.email?.split('@')[0] ??
+    'User';
+  const parts = name.trim().split(/\s+/);
+  const initials =
+    parts.length >= 2
+      ? (parts[0][0]! + parts[parts.length - 1]![0]!).toUpperCase()
+      : name.slice(0, 2).toUpperCase();
+  return { id: su.id, name, email: su.email ?? '', role: 'admin', initials };
+}
+
+async function fetchUserOrgs(userId: string): Promise<Organization[]> {
+  try {
+    const { data, error } = await supabase
+      .from('organization_members')
+      .select('role, org:organizations(id, name, type, currency, currency_symbol)')
+      .eq('user_id', userId);
+
+    if (error || !data?.length) return DEMO_ORGS;
+
+    const orgs: Organization[] = await Promise.all(
+      (data as any[]).map(async (row, idx) => {
+        const o = row.org as any;
+        const [txRes, loanRes, memRes] = await Promise.all([
+          supabase.from('transactions').select('amount, type').eq('org_id', o.id),
+          supabase
+            .from('loans')
+            .select('balance')
+            .eq('org_id', o.id)
+            .in('status', ['active', 'overdue']),
+          supabase
+            .from('organization_members')
+            .select('id', { count: 'exact', head: true })
+            .eq('org_id', o.id),
+        ]);
+
+        const txs = txRes.data ?? [];
+        const incoming = txs
+          .filter(t => ['contribution', 'income', 'repayment'].includes(t.type))
+          .reduce((s, t) => s + (t.amount as number), 0);
+        const outgoing = txs
+          .filter(t => ['expense', 'loan'].includes(t.type))
+          .reduce((s, t) => s + Math.abs(t.amount as number), 0);
+        const totalLoans = (loanRes.data ?? []).reduce(
+          (s, l) => s + (l.balance as number),
+          0,
+        );
+
+        return {
+          id: o.id as string,
+          name: o.name as string,
+          type: o.type as string,
+          currency: o.currency as string,
+          currencySymbol: o.currency_symbol as string,
+          balance: incoming - outgoing,
+          totalContributions: incoming,
+          totalLoans,
+          membersCount: memRes.count ?? 0,
+          color: ORG_COLORS[idx % ORG_COLORS.length]!,
+        };
+      }),
+    );
+
+    return orgs;
+  } catch {
+    return DEMO_ORGS;
+  }
+}
+
+// ─── Context ──────────────────────────────────────────────────────────────────
+
+const AppContext = createContext<AppContextType | null>(null);
+
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<AppState>({
     hasSeenOnboarding: false,
@@ -100,28 +190,81 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     isLoading: true,
   });
 
+  // Prevent double-update from onAuthStateChange firing during init
+  const initialized = useRef(false);
+
   useEffect(() => {
-    async function loadState() {
+    async function init() {
       try {
-        const [onboardingDone, authData] = await Promise.all([
+        const [onboardingStr, { data: sessionData }] = await Promise.all([
           AsyncStorage.getItem('hasSeenOnboarding'),
-          AsyncStorage.getItem('authUser'),
+          supabase.auth.getSession(),
         ]);
 
-        const isAuth = authData !== null;
-        setState({
-          hasSeenOnboarding: onboardingDone === 'true',
-          isAuthenticated: isAuth,
-          user: isAuth ? DEMO_USER : null,
-          organizations: isAuth ? DEMO_ORGS : [],
-          currentOrg: isAuth ? DEMO_ORGS[0] : null,
-          isLoading: false,
-        });
+        const hasSeenOnboarding = onboardingStr === 'true';
+        const session = sessionData.session;
+
+        if (session?.user) {
+          const user = buildAppUser(session.user);
+          const orgs = await fetchUserOrgs(session.user.id);
+          const savedOrgId = await AsyncStorage.getItem('currentOrgId');
+          const currentOrg =
+            (savedOrgId ? orgs.find(o => o.id === savedOrgId) : null) ??
+            orgs[0] ??
+            null;
+          setState({
+            hasSeenOnboarding,
+            isAuthenticated: true,
+            user,
+            organizations: orgs,
+            currentOrg,
+            isLoading: false,
+          });
+        } else {
+          setState({
+            hasSeenOnboarding,
+            isAuthenticated: false,
+            user: null,
+            organizations: [],
+            currentOrg: null,
+            isLoading: false,
+          });
+        }
       } catch {
         setState(prev => ({ ...prev, isLoading: false }));
+      } finally {
+        initialized.current = true;
       }
     }
-    loadState();
+
+    init();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (!initialized.current) return; // handled by init()
+      if (session?.user) {
+        const user = buildAppUser(session.user);
+        const orgs = await fetchUserOrgs(session.user.id);
+        setState(prev => ({
+          ...prev,
+          isAuthenticated: true,
+          user,
+          organizations: orgs,
+          currentOrg: orgs[0] ?? null,
+        }));
+      } else {
+        setState(prev => ({
+          ...prev,
+          isAuthenticated: false,
+          user: null,
+          organizations: [],
+          currentOrg: null,
+        }));
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   const completeOnboarding = useCallback(async () => {
@@ -129,50 +272,40 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setState(prev => ({ ...prev, hasSeenOnboarding: true }));
   }, []);
 
-  const login = useCallback(async (email: string, _password: string) => {
-    await AsyncStorage.setItem('authUser', JSON.stringify({ email }));
-    setState(prev => ({
-      ...prev,
-      isAuthenticated: true,
-      user: { ...DEMO_USER, email },
-      organizations: DEMO_ORGS,
-      currentOrg: DEMO_ORGS[0],
-    }));
+  const login = useCallback(async (email: string, password: string) => {
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) throw error;
+    // onAuthStateChange updates state once initialized
   }, []);
 
-  const register = useCallback(async (name: string, email: string, _password: string) => {
-    const initials = name
-      .split(' ')
-      .map(n => n[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2);
-    const user: User = { ...DEMO_USER, name, email, initials };
-    await AsyncStorage.setItem('authUser', JSON.stringify({ email }));
-    setState(prev => ({
-      ...prev,
-      isAuthenticated: true,
-      user,
-      organizations: DEMO_ORGS,
-      currentOrg: DEMO_ORGS[0],
-    }));
+  const register = useCallback(async (name: string, email: string, password: string) => {
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { data: { name } },
+    });
+    if (error) throw error;
+    // Attempt to upsert profile — fails gracefully if table not yet created
+    if (data.user) {
+      try {
+        await supabase.from('profiles').upsert({ id: data.user.id, name });
+      } catch {
+        // Table may not exist yet; auth still succeeds
+      }
+    }
   }, []);
 
   const logout = useCallback(async () => {
-    await AsyncStorage.removeItem('authUser');
-    setState(prev => ({
-      ...prev,
-      isAuthenticated: false,
-      user: null,
-      organizations: [],
-      currentOrg: null,
-    }));
+    await Promise.all([supabase.auth.signOut(), AsyncStorage.removeItem('currentOrgId')]);
   }, []);
 
   const switchOrganization = useCallback(
     (orgId: string) => {
       const org = state.organizations.find(o => o.id === orgId);
-      if (org) setState(prev => ({ ...prev, currentOrg: org }));
+      if (org) {
+        AsyncStorage.setItem('currentOrgId', orgId).catch(() => {});
+        setState(prev => ({ ...prev, currentOrg: org }));
+      }
     },
     [state.organizations],
   );
