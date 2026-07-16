@@ -23,7 +23,7 @@ export function Badge({ label, variant = 'default', style, dot = false }: BadgeP
     muted: { bg: colors.muted, text: colors.mutedForeground },
   };
 
-  const { bg, text } = config[variant];
+  const { bg, text } = config[variant] ?? config.default;
 
   return (
     <View style={[styles.badge, { backgroundColor: bg, borderRadius: 100 }, style]}>

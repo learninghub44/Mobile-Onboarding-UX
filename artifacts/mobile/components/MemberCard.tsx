@@ -26,7 +26,7 @@ const CONTRIB_CONFIG: Record<string, { variant: 'success' | 'danger' | 'info'; l
 
 export function MemberCard({ member, onPress, compact = false }: MemberCardProps) {
   const colors = useColors();
-  const cs = CONTRIB_CONFIG[member.contribution_status];
+  const cs = CONTRIB_CONFIG[member.contribution_status] ?? CONTRIB_CONFIG.up_to_date;
 
   return (
     <Pressable
