@@ -15,6 +15,7 @@ import { useColors } from '@/hooks/useColors';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { supabase } from '@/lib/supabase';
+import { getAuthErrorMessage } from '@/lib/authErrors';
 
 // Supabase recovery links append tokens as a URL fragment
 // (chamayetu://reset-password#access_token=...&refresh_token=...&type=recovery).
@@ -92,7 +93,7 @@ export default function ResetPasswordScreen() {
       if (error) throw error;
       setDone(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to reset password.');
+      setError(getAuthErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -139,6 +140,9 @@ export default function ResetPasswordScreen() {
             secureToggle
             leftIcon="lock"
             editable={ready}
+            autoComplete="new-password"
+            textContentType="newPassword"
+            returnKeyType="next"
           />
           <Input
             label="Confirm password"
@@ -148,6 +152,10 @@ export default function ResetPasswordScreen() {
             secureToggle
             leftIcon="lock"
             editable={ready}
+            autoComplete="new-password"
+            textContentType="newPassword"
+            returnKeyType="go"
+            onSubmitEditing={handleReset}
           />
 
           <Button title="Reset Password" onPress={handleReset} loading={loading} disabled={!ready} />

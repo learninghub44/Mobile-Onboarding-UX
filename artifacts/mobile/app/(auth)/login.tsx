@@ -19,6 +19,7 @@ import { useApp } from '@/context/AppContext';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { supabase } from '@/lib/supabase';
+import { getAuthErrorMessage } from '@/lib/authErrors';
 import { WEB_APP_URL } from '@/constants/site';
 
 // Native builds must use the chamayetu:// scheme to reopen the app;
@@ -49,7 +50,7 @@ export default function LoginScreen() {
       await login(email.trim(), password);
       // Navigation will be handled by AppContext's onAuthStateChange
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Login failed. Please check your credentials.');
+      setError(getAuthErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -103,6 +104,9 @@ export default function LoginScreen() {
             keyboardType="email-address"
             autoCapitalize="none"
             leftIcon="mail"
+            autoComplete="email"
+            textContentType="username"
+            returnKeyType="next"
           />
 
           <Input
@@ -112,6 +116,10 @@ export default function LoginScreen() {
             onChangeText={setPassword}
             secureToggle
             leftIcon="lock"
+            autoComplete="current-password"
+            textContentType="password"
+            returnKeyType="go"
+            onSubmitEditing={handleLogin}
           />
 
            <Pressable
@@ -130,7 +138,7 @@ export default function LoginScreen() {
                  setResetSent(true);
                  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
                } catch (err) {
-                 setError(err instanceof Error ? err.message : 'Failed to send reset email.');
+                 setError(getAuthErrorMessage(err));
                } finally {
                  setLoading(false);
                }

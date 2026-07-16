@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import {
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -69,6 +70,7 @@ export function Input({
           style={[
             styles.input,
             { color: colors.foreground, flex: 1 },
+            Platform.OS === 'web' && (styles.webNoOutline as object),
             style,
           ]}
           placeholderTextColor={colors.mutedForeground}
@@ -122,6 +124,13 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_400Regular',
     fontSize: 15,
     paddingVertical: 0,
+  },
+  // react-native-web renders TextInput as a native <input>, which keeps
+  // the browser's own focus outline on top of our custom border --
+  // producing a doubled/clashing ring while actively typing.
+  webNoOutline: {
+    outlineStyle: 'none' as 'solid',
+    outlineWidth: 0,
   },
   leftIcon: { marginRight: 10 },
   rightIconBtn: { padding: 4, marginLeft: 6 },

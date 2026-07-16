@@ -16,6 +16,7 @@ import { useColors } from '@/hooks/useColors';
 import { useApp } from '@/context/AppContext';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { getAuthErrorMessage } from '@/lib/authErrors';
 
 function PasswordStrength({ password }: { password: string }) {
   const colors = useColors();
@@ -85,8 +86,8 @@ export default function RegisterScreen() {
       await register(name.trim(), email.trim(), password);
       // Navigate to profile setup
       router.replace('/(profile-setup)' as never);
-    } catch {
-      setError('Registration failed. Please try again.');
+    } catch (err) {
+      setError(getAuthErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -141,6 +142,9 @@ export default function RegisterScreen() {
             onChangeText={setName}
             autoCapitalize="words"
             leftIcon="user"
+            autoComplete="name"
+            textContentType="name"
+            returnKeyType="next"
           />
 
           <Input
@@ -151,6 +155,9 @@ export default function RegisterScreen() {
             keyboardType="email-address"
             autoCapitalize="none"
             leftIcon="mail"
+            autoComplete="email"
+            textContentType="username"
+            returnKeyType="next"
           />
 
           <Input
@@ -161,6 +168,10 @@ export default function RegisterScreen() {
             secureToggle
             leftIcon="lock"
             hint="At least 8 characters with uppercase, numbers, and symbols"
+            autoComplete="new-password"
+            textContentType="newPassword"
+            returnKeyType="go"
+            onSubmitEditing={handleRegister}
           />
 
           <PasswordStrength password={password} />
