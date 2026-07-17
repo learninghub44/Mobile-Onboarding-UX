@@ -1,5 +1,5 @@
-import React from 'react';
-import { Platform, StyleSheet, Text, View } from 'react-native';
+import React, { useState } from 'react';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Feather } from '@expo/vector-icons';
 import { useColors } from '@/hooks/useColors';
@@ -11,11 +11,15 @@ interface FinancialCardProps {
   balance: number;
   currencySymbol: string;
   currency: string;
-  contributionProgress: number; // 0-1
-  contributionTarget: number;
-  contributionCurrent: number;
   membersCount: number;
+  /** null when the org hasn't set a monthly contribution goal yet */
+  monthlyTarget: number | null;
+  /** real month-to-date contribution total, computed from transactions */
+  monthContributions: number;
+  onSetGoal: () => void;
 }
+
+const MONTH_NAME = new Date().toLocaleDateString('en-KE', { month: 'long' });
 
 export function FinancialCard({
   orgName,
@@ -23,13 +27,14 @@ export function FinancialCard({
   balance,
   currencySymbol,
   currency,
-  contributionProgress,
-  contributionTarget,
-  contributionCurrent,
   membersCount,
+  monthlyTarget,
+  monthContributions,
+  onSetGoal,
 }: FinancialCardProps) {
   const colors = useColors();
-  const progressPct = Math.min(contributionProgress, 1);
+  const [hidden, setHidden] = useState(false);
+  const progressPct = monthlyTarget ? Math.min(monthContributions / monthlyTarget, 1) : 0;
 
   return (
     <LinearGradient
@@ -38,6 +43,14 @@ export function FinancialCard({
       end={{ x: 1, y: 1 }}
       style={[styles.card, { borderRadius: colors.radius + 4 }]}
     >
+      {/* Watermark bank icon for a card-like feel */}
+      <Feather
+        name="credit-card"
+        size={90}
+        color="rgba(255,255,255,0.06)"
+        style={styles.watermark}
+      />
+
       {/* Header */}
       <View style={styles.header}>
         <View>
@@ -52,37 +65,43 @@ export function FinancialCard({
 
       {/* Balance */}
       <View style={styles.balanceBlock}>
-        <Text style={styles.balanceLabel}>Total Balance</Text>
+        <View style={styles.balanceLabelRow}>
+          <Text style={styles.balanceLabel}>Total Balance</Text>
+          <Pressable onPress={() => setHidden(h => !h)} hitSlop={10}>
+            <Feather name={hidden ? 'eye-off' : 'eye'} size={15} color="rgba(255,255,255,0.55)" />
+          </Pressable>
+        </View>
         <Text style={styles.balance} numberOfLines={1}>
-          {formatCurrency(balance, currencySymbol, currency)}
+          {hidden ? '••••••' : formatCurrency(balance, currencySymbol, currency)}
         </Text>
       </View>
 
-      {/* Contribution progress */}
-      <View style={styles.progressSection}>
-        <View style={styles.progressHeader}>
-          <Text style={styles.progressLabel}>July Contributions</Text>
-          <Text style={styles.progressValue}>
-            {Math.round(progressPct * 100)}%
-          </Text>
+      {/* Contribution progress — only shown once the org has a real goal set */}
+      {monthlyTarget ? (
+        <View style={styles.progressSection}>
+          <View style={styles.progressHeader}>
+            <Text style={styles.progressLabel}>{MONTH_NAME} Contributions</Text>
+            <Text style={styles.progressValue}>{Math.round(progressPct * 100)}%</Text>
+          </View>
+          <View style={[styles.progressTrack, { backgroundColor: 'rgba(255,255,255,0.2)' }]}>
+            <View style={[styles.progressFill, { width: `${progressPct * 100}%` }]} />
+          </View>
+          <View style={styles.progressFooter}>
+            <Text style={styles.progressSub}>
+              {formatCurrency(monthContributions, currencySymbol, currency)} collected
+            </Text>
+            <Text style={styles.progressSub}>
+              Target: {formatCurrency(monthlyTarget, currencySymbol, currency)}
+            </Text>
+          </View>
         </View>
-        <View style={[styles.progressTrack, { backgroundColor: 'rgba(255,255,255,0.2)' }]}>
-          <View
-            style={[
-              styles.progressFill,
-              { width: `${progressPct * 100}%` },
-            ]}
-          />
-        </View>
-        <View style={styles.progressFooter}>
-          <Text style={styles.progressSub}>
-            {formatCurrency(contributionCurrent, currencySymbol, currency)} collected
-          </Text>
-          <Text style={styles.progressSub}>
-            Target: {formatCurrency(contributionTarget, currencySymbol, currency)}
-          </Text>
-        </View>
-      </View>
+      ) : (
+        <Pressable onPress={onSetGoal} style={styles.setGoalRow}>
+          <Feather name="target" size={14} color="rgba(255,255,255,0.75)" />
+          <Text style={styles.setGoalText}>Set a monthly contribution goal</Text>
+          <Feather name="chevron-right" size={14} color="rgba(255,255,255,0.5)" />
+        </Pressable>
+      )}
     </LinearGradient>
   );
 }
@@ -92,6 +111,7 @@ const styles = StyleSheet.create({
     padding: 22,
     marginHorizontal: 20,
     gap: 20,
+    overflow: 'hidden',
     ...Platform.select({
       ios: {
         shadowColor: '#1B3A6B',
@@ -101,6 +121,12 @@ const styles = StyleSheet.create({
       },
       android: { elevation: 12 },
     }),
+  },
+  watermark: {
+    position: 'absolute',
+    right: -10,
+    bottom: -18,
+    transform: [{ rotate: '-12deg' }],
   },
   header: {
     flexDirection: 'row',
@@ -136,6 +162,7 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.9)',
   },
   balanceBlock: { gap: 4 },
+  balanceLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   balanceLabel: {
     fontFamily: 'Inter_400Regular',
     fontSize: 12,
@@ -175,5 +202,20 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_400Regular',
     fontSize: 11,
     color: 'rgba(255,255,255,0.55)',
+  },
+  setGoalRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 10,
+  },
+  setGoalText: {
+    flex: 1,
+    fontFamily: 'Inter_500Medium',
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.85)',
   },
 });

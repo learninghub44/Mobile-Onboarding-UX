@@ -10,5 +10,7 @@ The `GROQ_API_KEY` secret lives ONLY on the api-server. Mobile app code must nev
 
 **How to apply:**
 - api-server route: `artifacts/api-server/src/routes/ai.ts` — reads `process.env.GROQ_API_KEY`, accepts `{ messages, systemPrompt }`, calls `api.groq.com/openai/v1/chat/completions`, returns `{ content }`.
-- Mobile client: `artifacts/mobile/lib/groq.ts` — constructs the URL as `https://${process.env.EXPO_PUBLIC_DOMAIN}/api-server/api/ai/chat` and POSTs to it.
+- Mobile client: `artifacts/mobile/lib/groq.ts` — POSTs to `${EXPO_PUBLIC_API_SERVER_URL}/api/ai/chat`.
 - Model used: `llama-3.3-70b-versatile` (Groq's fastest large model).
+
+**Deploying outside Replit:** `EXPO_PUBLIC_API_SERVER_URL` must be set to wherever `artifacts/api-server` is actually deployed (e.g. a Render/Railway URL), not derived from `EXPO_PUBLIC_DOMAIN`/Replit's dev-proxy path. The old pattern (`https://${EXPO_PUBLIC_DOMAIN}/api-server`) only worked inside Replit's own routing and silently fell back to `http://localhost:8080` everywhere else, breaking AI chat outside Replit. `package.json`'s `dev` script still derives a sane default for Replit dev, but production builds must set this explicitly.

@@ -51,7 +51,8 @@ export default function InviteScreen() {
       setSuccess(`Invitation sent to ${email}`);
       setEmail('');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to send invitation.');
+      const message = (err as any)?.message || 'Failed to send invitation.';
+      setError(message);
     } finally {
       setLoading(false);
     }
@@ -108,7 +109,7 @@ export default function InviteScreen() {
             <View style={[styles.infoBox, { backgroundColor: colors.muted, borderRadius: colors.radius }]}>
               <Feather name="info" size={16} color={colors.mutedForeground} />
               <Text style={[styles.infoText, { color: colors.mutedForeground }]}>
-                The member will receive an email invitation to join your organization. They'll need to create an account if they don't have one.
+                We'll save this as a pending invite. As soon as they create a ChamaYetu account using this exact email address, they'll automatically join {currentOrg?.name || 'your organization'} as a member.
               </Text>
             </View>
           </View>

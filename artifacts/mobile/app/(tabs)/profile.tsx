@@ -8,7 +8,6 @@ import {
   Text,
   TextInput,
   View,
-  Linking,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Feather } from '@expo/vector-icons';
@@ -259,19 +258,19 @@ export default function ProfileScreen() {
   }
 
   function handleHelpCenter() {
-    Linking.openURL('https://chamayetu.christech.co.ke/help');
+    router.push('/(support)/help' as never);
   }
 
   function handleContactSupport() {
-    Linking.openURL('mailto:support@chamayetu.christech.co.ke?subject=Support Request');
+    router.push('/(support)/contact' as never);
   }
 
   function handlePrivacyPolicy() {
-    Linking.openURL('https://chamayetu.christech.co.ke/privacy');
+    router.push('/(support)/privacy' as never);
   }
 
   function handleTermsOfService() {
-    Linking.openURL('https://chamayetu.christech.co.ke/terms');
+    router.push('/(support)/terms' as never);
   }
 
   return (

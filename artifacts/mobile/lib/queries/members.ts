@@ -108,56 +108,69 @@ export async function createMember(member: MemberInsert): Promise<Member | null>
   return data;
 }
 
+export interface OrgInvite {
+  id: string;
+  org_id: string;
+  email: string;
+  role: 'admin' | 'treasurer' | 'secretary' | 'member';
+  status: 'pending' | 'accepted' | 'cancelled';
+  created_at: string;
+}
+
+export async function getPendingInvites(orgId: string): Promise<OrgInvite[]> {
+  const { data, error } = await supabase
+    .from('organization_invites')
+    .select('*')
+    .eq('org_id', orgId)
+    .eq('status', 'pending')
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('Error fetching invites:', error);
+    return [];
+  }
+  return data || [];
+}
+
+export async function cancelInvite(inviteId: string): Promise<void> {
+  const { error } = await supabase
+    .from('organization_invites')
+    .update({ status: 'cancelled' })
+    .eq('id', inviteId);
+  if (error) throw error;
+}
+
+/**
+ * Records a pending invitation for `email` to join `orgId`.
+ *
+ * IMPORTANT: this must never call supabase.auth.signUp() from the
+ * client. Doing so replaces the *currently signed-in admin's* session
+ * with a brand-new session for the invited email (that's how
+ * supabase-js signUp works), which silently logs the admin out of
+ * their own account mid-invite. Instead we just record intent here.
+ * When someone registers with a matching email, AppContext.register()
+ * checks organization_invites and auto-joins them to every org that
+ * invited that email, then marks the invite 'accepted'.
+ */
 export async function inviteMember(orgId: string, email: string): Promise<void> {
   const normalizedEmail = email.trim().toLowerCase();
-  const tempPassword = `${Math.random().toString(36).slice(2, 10)}A!1`;
-  const displayName = normalizedEmail.split('@')[0] || normalizedEmail;
+  if (!normalizedEmail) {
+    throw new Error('Please enter an email address.');
+  }
 
   await getAuthorizedUserForOrg(orgId);
 
-  const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-    email: normalizedEmail,
-    password: tempPassword,
-    options: {
-      data: {
-        name: displayName,
-      },
-    },
-  });
-
-  if (signUpError) {
-    throw signUpError;
-  }
-
-  const userId = signUpData.user?.id;
-  if (!userId) {
-    throw new Error('Invite could not create a user record.');
-  }
-
-  const { error: profileError } = await supabase
-    .from('profiles')
-    .upsert({
-      id: userId,
-      name: displayName,
-    });
-
-  if (profileError) {
-    throw profileError;
-  }
-
-  const { error: memberError } = await supabase
-    .from('organization_members')
+  const { error } = await supabase
+    .from('organization_invites')
     .upsert(
       {
         org_id: orgId,
-        user_id: userId,
+        email: normalizedEmail,
         role: 'member',
         status: 'pending',
       },
-      { onConflict: 'org_id,user_id' },
+      { onConflict: 'org_id,email' },
     );
 
-  if (memberError) {
-    throw memberError;
-  }
+  if (error) throw error;
 }

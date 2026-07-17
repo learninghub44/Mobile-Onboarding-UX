@@ -26,18 +26,22 @@ import { ErrorState } from '@/components/ui/ErrorState';
 import { SkeletonCard, SkeletonCircle, SkeletonText } from '@/components/SkeletonLoader';
 import { useOrgQuery } from '@/lib/useOrgQuery';
 import { useRequireOrg } from '@/hooks/useRequireOrg';
-import { getTransactions, getUpcomingMeeting, getOrgMembers, createTransaction } from '@/lib/queries';
+import { getTransactions, getUpcomingMeeting, getOrgMembers, createTransaction, setMonthlyTarget } from '@/lib/queries';
 import { formatCurrency, getGreeting } from '@/lib/format';
 
 export default function DashboardScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { user, currentOrg, orgsError, clearOrgsError } = useApp();
+  const { user, currentOrg, orgsError, clearOrgsError, refreshOrganizations } = useApp();
   const canRenderOrg = useRequireOrg();
   const [showContributeModal, setShowContributeModal] = useState(false);
   const [showExpenseModal, setShowExpenseModal] = useState(false);
   const [showLoanModal, setShowLoanModal] = useState(false);
+  const [showRepayModal, setShowRepayModal] = useState(false);
+  const [showGoalModal, setShowGoalModal] = useState(false);
+  const [goalAmount, setGoalAmount] = useState('');
+  const [savingGoal, setSavingGoal] = useState(false);
   const [amount, setAmount] = useState('');
   const [note, setNote] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -108,10 +112,13 @@ export default function DashboardScreen() {
           balance={currentOrg.balance}
           currencySymbol={currentOrg.currencySymbol}
           currency={currentOrg.currency}
-          contributionProgress={0.63}
-          contributionTarget={140000}
-          contributionCurrent={88000}
           membersCount={currentOrg.membersCount}
+          monthlyTarget={currentOrg.monthlyTarget}
+          monthContributions={currentOrg.monthContributions}
+          onSetGoal={() => {
+            setGoalAmount(currentOrg.monthlyTarget ? String(currentOrg.monthlyTarget) : '');
+            setShowGoalModal(true);
+          }}
         />
 
         {/* Stats row */}
@@ -144,7 +151,8 @@ export default function DashboardScreen() {
           <QuickAction icon="plus-circle" label="Contribute" onPress={() => setShowContributeModal(true)} color={colors.success} />
           <QuickAction icon="credit-card" label="Loan" onPress={() => setShowLoanModal(true)} color={colors.info} />
           <QuickAction icon="minus-circle" label="Expense" onPress={() => setShowExpenseModal(true)} color={colors.warning} />
-          <QuickAction icon="user-plus" label="Invite" onPress={() => router.push('/(tabs)/invite' as never)} color={colors.accent} />
+          <QuickAction icon="repeat" label="Repay" onPress={() => setShowRepayModal(true)} color={colors.accent} />
+          <QuickAction icon="user-plus" label="Invite" onPress={() => router.push('/(tabs)/invite' as never)} color={colors.destructive} />
         </View>
 
         {/* Recent Activity */}
@@ -469,6 +477,121 @@ export default function DashboardScreen() {
                 disabled={isSubmitting || !amount}
               >
                 <Text style={[styles.modalBtnText, { color: '#FFFFFF' }]}>{isSubmitting ? 'Submitting...' : 'Submit'}</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      )}
+
+      {/* Repay Loan Modal */}
+      {showRepayModal && (
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Text style={[styles.modalTitle, { color: colors.foreground }]}>Repay Loan</Text>
+            <TextInput
+              style={[styles.input, { backgroundColor: colors.background, color: colors.foreground, borderColor: colors.border }]}
+              placeholder="Repayment Amount"
+              placeholderTextColor={colors.mutedForeground}
+              value={amount}
+              onChangeText={setAmount}
+              keyboardType="numeric"
+              autoFocus
+            />
+            <TextInput
+              style={[styles.input, { backgroundColor: colors.background, color: colors.foreground, borderColor: colors.border }]}
+              placeholder="Note (optional)"
+              placeholderTextColor={colors.mutedForeground}
+              value={note}
+              onChangeText={setNote}
+            />
+            <View style={styles.modalActions}>
+              <Pressable
+                onPress={() => {
+                  setShowRepayModal(false);
+                  setAmount('');
+                  setNote('');
+                }}
+                style={[styles.modalBtn, { backgroundColor: colors.muted }]}
+              >
+                <Text style={[styles.modalBtnText, { color: colors.foreground }]}>Cancel</Text>
+              </Pressable>
+              <Pressable
+                onPress={async () => {
+                  if (!amount || isSubmitting) return;
+                  setIsSubmitting(true);
+                  try {
+                    await createTransaction({
+                      type: 'repayment',
+                      title: note || 'Loan Repayment',
+                      description: note || 'Loan repayment',
+                      amount: parseFloat(amount),
+                      org_id: currentOrg.id,
+                      member_id: user.id,
+                      status: 'completed',
+                    });
+                    setShowRepayModal(false);
+                    setAmount('');
+                    setNote('');
+                    Alert.alert('Success', 'Repayment recorded');
+                  } catch (error) {
+                    Alert.alert('Error', 'Failed to record repayment');
+                  } finally {
+                    setIsSubmitting(false);
+                  }
+                }}
+                style={[styles.modalBtn, { backgroundColor: colors.accent }]}
+                disabled={isSubmitting || !amount}
+              >
+                <Text style={[styles.modalBtnText, { color: '#FFFFFF' }]}>{isSubmitting ? 'Saving...' : 'Save'}</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      )}
+
+      {/* Set Monthly Goal Modal */}
+      {showGoalModal && (
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Text style={[styles.modalTitle, { color: colors.foreground }]}>Monthly Contribution Goal</Text>
+            <TextInput
+              style={[styles.input, { backgroundColor: colors.background, color: colors.foreground, borderColor: colors.border }]}
+              placeholder={`Target amount (${currentOrg.currencySymbol})`}
+              placeholderTextColor={colors.mutedForeground}
+              value={goalAmount}
+              onChangeText={setGoalAmount}
+              keyboardType="numeric"
+              autoFocus
+            />
+            <View style={styles.modalActions}>
+              <Pressable
+                onPress={() => {
+                  setShowGoalModal(false);
+                  setGoalAmount('');
+                }}
+                style={[styles.modalBtn, { backgroundColor: colors.muted }]}
+              >
+                <Text style={[styles.modalBtnText, { color: colors.foreground }]}>Cancel</Text>
+              </Pressable>
+              <Pressable
+                onPress={async () => {
+                  if (!goalAmount || savingGoal) return;
+                  setSavingGoal(true);
+                  try {
+                    await setMonthlyTarget(currentOrg.id, parseFloat(goalAmount));
+                    await refreshOrganizations(currentOrg.id);
+                    setShowGoalModal(false);
+                    setGoalAmount('');
+                  } catch (error) {
+                    Alert.alert('Error', error instanceof Error ? error.message : 'Failed to save goal');
+                  } finally {
+                    setSavingGoal(false);
+                  }
+                }}
+                style={[styles.modalBtn, { backgroundColor: colors.primary }]}
+                disabled={savingGoal || !goalAmount}
+              >
+                <Text style={[styles.modalBtnText, { color: '#FFFFFF' }]}>{savingGoal ? 'Saving...' : 'Save Goal'}</Text>
               </Pressable>
             </View>
           </View>

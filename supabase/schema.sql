@@ -32,9 +32,13 @@ create table if not exists public.organizations (
   type            text not null default 'Chama',   -- Chama | SACCO | Investment Group
   currency        text not null default 'KES',
   currency_symbol text not null default 'KSh',
+  monthly_target  bigint,                          -- optional monthly contribution goal, set by admin; null = no goal configured
   created_by      uuid references auth.users,
   created_at      timestamptz not null default now()
 );
+
+-- Backfill for orgs created before this column existed.
+alter table public.organizations add column if not exists monthly_target bigint;
 
 alter table public.organizations enable row level security;
 create policy "Authenticated users can create organizations"
@@ -191,7 +195,70 @@ create policy "Admins and treasurers can update membership roles and status"
     public.is_org_admin_or_treasurer(org_id)
   );
 
--- ─── Transactions ─────────────────────────────────────────────
+-- ─── Organization Invites ──────────────────────────────────────
+-- Pending invitations for people who aren't members yet. This
+-- deliberately does NOT create an auth user or call supabase.auth.signUp()
+-- from the client — doing so from the mobile app would replace the
+-- inviting admin's own session with a freshly created session for the
+-- invitee (supabase-js swaps the active session on signUp), effectively
+-- logging the admin out of their own account every time they invited
+-- someone. Instead we just record intent here; when someone registers
+-- with a matching email, AppContext.register() auto-joins them.
+create table if not exists public.organization_invites (
+  id         uuid primary key default gen_random_uuid(),
+  org_id     uuid not null references public.organizations on delete cascade,
+  email      text not null,
+  role       text not null default 'member'
+               check (role in ('admin', 'treasurer', 'secretary', 'member')),
+  invited_by uuid references auth.users,
+  status     text not null default 'pending' check (status in ('pending', 'accepted', 'cancelled')),
+  created_at timestamptz not null default now(),
+  unique (org_id, email)
+);
+
+alter table public.organization_invites enable row level security;
+
+drop policy if exists "Admins and treasurers can view invites for their org" on public.organization_invites;
+create policy "Admins and treasurers can view invites for their org"
+  on public.organization_invites for select using (
+    public.is_org_admin_or_treasurer(org_id)
+  );
+
+-- A signed-in user can also see their own pending invites (by email on
+-- their JWT) so the app can show "you've been invited to X" before they
+-- even have a membership row.
+drop policy if exists "Users can view invites addressed to their email" on public.organization_invites;
+create policy "Users can view invites addressed to their email"
+  on public.organization_invites for select using (
+    lower(email) = lower(coalesce(auth.jwt() ->> 'email', ''))
+  );
+
+drop policy if exists "Admins and treasurers can create invites for their org" on public.organization_invites;
+create policy "Admins and treasurers can create invites for their org"
+  on public.organization_invites for insert with check (
+    public.is_org_admin_or_treasurer(org_id)
+  );
+
+drop policy if exists "Admins and treasurers can cancel invites" on public.organization_invites;
+create policy "Admins and treasurers can cancel invites"
+  on public.organization_invites for update using (
+    public.is_org_admin_or_treasurer(org_id)
+  );
+
+-- A newly-registered user needs to flip their own matching invites to
+-- 'accepted' as part of auto-join. Restrict it to exactly that: only
+-- their own email, only pending -> accepted, nothing else.
+drop policy if exists "Invitee can accept their own invite" on public.organization_invites;
+create policy "Invitee can accept their own invite"
+  on public.organization_invites for update using (
+    lower(email) = lower(coalesce(auth.jwt() ->> 'email', ''))
+  )
+  with check (
+    lower(email) = lower(coalesce(auth.jwt() ->> 'email', ''))
+    and status = 'accepted'
+  );
+
+
 create table if not exists public.transactions (
   id              uuid primary key default gen_random_uuid(),
   org_id          uuid not null references public.organizations on delete cascade,

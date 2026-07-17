@@ -33,6 +33,8 @@ export interface Organization {
   totalLoans: number;
   membersCount: number;
   color: string;
+  monthlyTarget: number | null;
+  monthContributions: number;
 }
 
 interface AppState {
@@ -78,7 +80,7 @@ async function fetchUserOrgs(userId: string): Promise<{ orgs: Organization[]; er
   try {
     const { data, error } = await supabase
       .from('organization_members')
-      .select('role, org:organizations(id, name, type, currency, currency_symbol)')
+      .select('role, org:organizations(id, name, type, currency, currency_symbol, monthly_target)')
       .eq('user_id', userId);
 
     if (error) {
@@ -89,11 +91,15 @@ async function fetchUserOrgs(userId: string): Promise<{ orgs: Organization[]; er
       return { orgs: [], error: null };
     }
 
+    const monthStart = new Date();
+    monthStart.setDate(1);
+    monthStart.setHours(0, 0, 0, 0);
+
     const orgs: Organization[] = await Promise.all(
       (data as any[]).map(async (row, idx) => {
         const o = row.org as any;
         const [txRes, loanRes, memRes] = await Promise.all([
-          supabase.from('transactions').select('amount, type').eq('org_id', o.id),
+          supabase.from('transactions').select('amount, type, created_at').eq('org_id', o.id),
           supabase
             .from('loans')
             .select('balance')
@@ -116,6 +122,9 @@ async function fetchUserOrgs(userId: string): Promise<{ orgs: Organization[]; er
           (s, l) => s + (l.balance as number),
           0,
         );
+        const monthContributions = txs
+          .filter(t => t.type === 'contribution' && new Date(t.created_at as string) >= monthStart)
+          .reduce((s, t) => s + (t.amount as number), 0);
 
         return {
           id: o.id as string,
@@ -128,6 +137,8 @@ async function fetchUserOrgs(userId: string): Promise<{ orgs: Organization[]; er
           totalLoans,
           membersCount: memRes.count ?? 0,
           color: ORG_COLORS[idx % ORG_COLORS.length]!,
+          monthlyTarget: o.monthly_target ?? null,
+          monthContributions,
         };
       }),
     );
@@ -296,6 +307,35 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       // If profile creation fails, sign out the user to avoid orphaned auth accounts
       await supabase.auth.signOut();
       throw new Error('Failed to create profile. Please try again.');
+    }
+
+    // Auto-join any organizations that invited this email address before
+    // they signed up. Best-effort: an invite lookup failure shouldn't
+    // block registration, since the user can still be invited/join later.
+    try {
+      const normalizedEmail = email.trim().toLowerCase();
+      const { data: invites } = await supabase
+        .from('organization_invites')
+        .select('id, org_id, role')
+        .eq('email', normalizedEmail)
+        .eq('status', 'pending');
+
+      for (const invite of invites ?? []) {
+        const { error: joinError } = await supabase.from('organization_members').insert({
+          org_id: invite.org_id,
+          user_id: data.user.id,
+          role: invite.role,
+          status: 'active',
+        });
+        if (!joinError) {
+          await supabase
+            .from('organization_invites')
+            .update({ status: 'accepted' })
+            .eq('id', invite.id);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to process pending invites at registration:', err);
     }
   }, []);
 

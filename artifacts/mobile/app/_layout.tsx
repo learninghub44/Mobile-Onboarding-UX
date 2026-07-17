@@ -28,6 +28,7 @@ function RootLayoutNav() {
       <Stack.Screen name="(auth)" options={{ headerShown: false }} />
       <Stack.Screen name="(profile-setup)" options={{ headerShown: false, animation: 'slide_from_right' }} />
       <Stack.Screen name="(org-setup)" options={{ headerShown: false, animation: 'slide_from_right' }} />
+      <Stack.Screen name="(support)" options={{ headerShown: false, animation: 'slide_from_right' }} />
       <Stack.Screen name="(tabs)" options={{ headerShown: false, animation: 'fade' }} />
     </Stack>
   );
