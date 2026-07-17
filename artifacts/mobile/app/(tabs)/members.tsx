@@ -10,6 +10,7 @@ import {
   ListRenderItemInfo,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useColors } from '@/hooks/useColors';
@@ -44,6 +45,14 @@ export default function MembersScreen() {
     ['members'],
     (orgId) => getOrgMembers(orgId)
   );
+
+  const stats = useMemo(() => {
+    const total = members.length;
+    const active = members.filter(m => m.status === 'active').length;
+    const inactive = total - active;
+    const participation = total > 0 ? Math.round((active / total) * 100) : 0;
+    return { total, active, inactive, participation };
+  }, [members]);
 
   const filtered = useMemo(() => {
     let list = members;
@@ -80,6 +89,36 @@ export default function MembersScreen() {
                   </Text>
                 </View>
               </View>
+
+              {/* Overview stat card */}
+              {!membersLoading && !membersError && members.length > 0 && (
+                <LinearGradient
+                  colors={[colors.gradientCard, colors.gradientCardEnd]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={[styles.overviewCard, { borderRadius: colors.radius + 2 }]}
+                >
+                  <Text style={styles.overviewTitle}>Member Overview</Text>
+                  <View style={styles.overviewRow}>
+                    <View style={styles.overviewStat}>
+                      <Text style={styles.overviewValue}>{stats.total}</Text>
+                      <Text style={styles.overviewLabel}>Total</Text>
+                    </View>
+                    <View style={styles.overviewStat}>
+                      <Text style={styles.overviewValue}>{stats.active}</Text>
+                      <Text style={styles.overviewLabel}>Active</Text>
+                    </View>
+                    <View style={styles.overviewStat}>
+                      <Text style={styles.overviewValue}>{stats.inactive}</Text>
+                      <Text style={styles.overviewLabel}>Inactive</Text>
+                    </View>
+                    <View style={styles.overviewStat}>
+                      <Text style={styles.overviewValue}>{stats.participation}%</Text>
+                      <Text style={styles.overviewLabel}>Active Rate</Text>
+                    </View>
+                  </View>
+                </LinearGradient>
+              )}
 
               {/* Search */}
               <View style={[styles.searchBar, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius }]}>
@@ -127,13 +166,10 @@ export default function MembersScreen() {
                 ))}
               </View>
             </View>
-
-            {/* List container top */}
-            <View style={[styles.listTop, { backgroundColor: colors.card, borderColor: colors.border, borderTopLeftRadius: colors.radius, borderTopRightRadius: colors.radius }]} />
           </>
         }
         renderItem={({ item }: ListRenderItemInfo<Member>) => (
-          <View style={[styles.itemWrapper, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <View style={styles.itemWrapper}>
             <MemberCard member={item} />
           </View>
         )}
@@ -219,19 +255,22 @@ const styles = StyleSheet.create({
     borderRadius: 100,
   },
   chipText: { fontSize: 13 },
-  listTop: {
-    height: 8,
-    marginHorizontal: 20,
-    borderWidth: 1,
-    borderBottomWidth: 0,
-    borderTopLeftRadius: 12,
-    borderTopRightRadius: 12,
+  overviewCard: {
+    padding: 18,
+    gap: 14,
   },
+  overviewTitle: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.75)',
+  },
+  overviewRow: { flexDirection: 'row', justifyContent: 'space-between' },
+  overviewStat: { alignItems: 'flex-start', gap: 2 },
+  overviewValue: { fontFamily: 'Inter_700Bold', fontSize: 22, color: '#FFFFFF' },
+  overviewLabel: { fontFamily: 'Inter_400Regular', fontSize: 11, color: 'rgba(255,255,255,0.6)' },
   itemWrapper: {
     marginHorizontal: 20,
-    borderLeftWidth: 1,
-    borderRightWidth: 1,
-    borderBottomWidth: StyleSheet.hairlineWidth,
+    marginBottom: 10,
   },
   emptyWrapper: {
     marginHorizontal: 20,
