@@ -21,28 +21,30 @@ import { ErrorState } from '@/components/ui/ErrorState';
 import { SkeletonCard, SkeletonCircle, SkeletonText } from '@/components/SkeletonLoader';
 import { useOrgQuery } from '@/lib/useOrgQuery';
 import { useRequireOrg } from '@/hooks/useRequireOrg';
-import { getTransactions, getLoans } from '@/lib/queries';
+import { getTransactions, getLoans, getOrgMembers } from '@/lib/queries';
 import { formatCurrency } from '@/lib/format';
 import type { Transaction, Loan } from '@/lib/queries';
 
 type TabKey = 'all' | 'contributions' | 'loans' | 'expenses';
 
 const TABS: { key: TabKey; label: string }[] = [
-  { key: 'all', label: 'All' },
+  { key: 'all', label: 'Overview' },
   { key: 'contributions', label: 'Contributions' },
   { key: 'loans', label: 'Loans' },
   { key: 'expenses', label: 'Expenses' },
 ];
 
-function LoanCard({ loan }: { loan: Loan }) {
+function LoanCard({ loan, memberName }: { loan: Loan; memberName: string }) {
   const colors = useColors();
   const statusColor = loan.status === 'overdue' ? colors.destructive : loan.status === 'settled' ? colors.success : colors.accent;
+  const repaidAmount = Math.max(loan.amount - loan.balance, 0);
+  const repaidPct = loan.amount > 0 ? Math.min(Math.round((repaidAmount / loan.amount) * 100), 100) : 0;
 
   return (
     <View style={[styles.loanCard, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius }]}>
       <View style={styles.loanHeader}>
         <View>
-          <Text style={[styles.loanMember, { color: colors.foreground }]}>Member {loan.member_id}</Text>
+          <Text style={[styles.loanMember, { color: colors.foreground }]}>{memberName}</Text>
           <Text style={[styles.loanMeta, { color: colors.mutedForeground }]}>
             {loan.interest_rate}% interest · Due {loan.due_date}
           </Text>
@@ -57,10 +59,10 @@ function LoanCard({ loan }: { loan: Loan }) {
         </View>
       </View>
       <View style={[styles.loanTrack, { backgroundColor: colors.muted }]}>
-        <View style={[styles.loanProgress, { width: '0%', backgroundColor: statusColor }]} />
+        <View style={[styles.loanProgress, { width: `${repaidPct}%`, backgroundColor: statusColor }]} />
       </View>
       <Text style={[styles.loanPercent, { color: colors.mutedForeground }]}>
-        0% repaid
+        {repaidPct}% repaid
       </Text>
     </View>
   );
@@ -74,8 +76,6 @@ export default function FinanceScreen() {
   const canRenderOrg = useRequireOrg();
   const [activeTab, setActiveTab] = useState<TabKey>('all');
 
-  if (!canRenderOrg || !currentOrg) return null;
-
   const topPad = Platform.OS === 'web' ? 67 : insets.top;
 
   const { data: transactions = [], isLoading: txLoading, isError: txError } = useOrgQuery(
@@ -86,6 +86,15 @@ export default function FinanceScreen() {
     ['loans'],
     (orgId) => getLoans(orgId)
   );
+  const { data: members = [] } = useOrgQuery(
+    ['members'],
+    (orgId) => getOrgMembers(orgId)
+  );
+  const memberNameById = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const m of members) map.set(m.user_id, m.name);
+    return map;
+  }, [members]);
 
   const filteredTransactions = transactions.filter(t => {
     if (activeTab === 'all') return true;
@@ -116,6 +125,32 @@ export default function FinanceScreen() {
     }
     return months;
   }, [transactions]);
+
+  // Real category breakdown — no fabricated figures. Percentages are of
+  // total transaction volume (in + out) so the bars are comparable.
+  const categoryBreakdown = useMemo(() => {
+    const sums: Record<string, number> = {
+      contribution: 0,
+      repayment: 0,
+      expense: 0,
+      loan: 0,
+      income: 0,
+    };
+    for (const t of transactions) {
+      sums[t.type] = (sums[t.type] ?? 0) + Math.abs(t.amount);
+    }
+    const total = Object.values(sums).reduce((a, b) => a + b, 0);
+    const rows = [
+      { key: 'contribution', label: 'Contributions', color: colors.success, amount: sums.contribution },
+      { key: 'repayment', label: 'Loan Repayments', color: colors.info, amount: sums.repayment },
+      { key: 'expense', label: 'Expenses', color: colors.warning, amount: sums.expense },
+      { key: 'loan', label: 'Loans Disbursed', color: colors.destructive, amount: sums.loan },
+      { key: 'income', label: 'Other Income', color: colors.accent, amount: sums.income },
+    ].filter(r => r.amount > 0);
+    return rows.map(r => ({ ...r, pct: total > 0 ? r.amount / total : 0 }));
+  }, [transactions, colors]);
+
+  if (!canRenderOrg || !currentOrg) return null;
 
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
@@ -161,6 +196,32 @@ export default function FinanceScreen() {
               <MiniChart data={monthlyContributions.map(m => ({ month: m.label, amount: m.amount }))} highlightColor={colors.accent} />
             </View>
 
+            {/* Category breakdown — real transaction totals, not fabricated percentages */}
+            {activeTab === 'all' && categoryBreakdown.length > 0 && (
+              <View style={[styles.breakdownSection, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                <Text style={[styles.chartTitle, { color: colors.foreground }]}>Category Breakdown</Text>
+                <View style={styles.breakdownList}>
+                  {categoryBreakdown.map(row => (
+                    <View key={row.key} style={styles.breakdownRow}>
+                      <View style={styles.breakdownLabelRow}>
+                        <View style={[styles.breakdownDot, { backgroundColor: row.color }]} />
+                        <Text style={[styles.breakdownLabel, { color: colors.foreground }]}>{row.label}</Text>
+                        <Text style={[styles.breakdownPct, { color: colors.mutedForeground }]}>
+                          {Math.round(row.pct * 100)}%
+                        </Text>
+                      </View>
+                      <View style={[styles.breakdownTrack, { backgroundColor: colors.muted }]}>
+                        <View style={[styles.breakdownFill, { width: `${row.pct * 100}%`, backgroundColor: row.color }]} />
+                      </View>
+                      <Text style={[styles.breakdownAmount, { color: colors.mutedForeground }]}>
+                        {formatCurrency(row.amount, currentOrg.currencySymbol, currentOrg.currency)}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            )}
+
             {/* Tabs */}
             <View style={[styles.tabsBar, { backgroundColor: colors.background }]}>
               {TABS.map(tab => (
@@ -193,9 +254,10 @@ export default function FinanceScreen() {
         }
         renderItem={({ item }: ListRenderItemInfo<Transaction | Loan>) => {
           if (showLoanCards) {
+            const loan = item as Loan;
             return (
               <View style={{ paddingHorizontal: 20, paddingTop: 10 }}>
-                <LoanCard loan={item as Loan} />
+                <LoanCard loan={loan} memberName={memberNameById.get(loan.member_id) || 'Unknown member'} />
               </View>
             );
           }
@@ -290,6 +352,23 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   chartTitle: { fontFamily: 'Inter_600SemiBold', fontSize: 15 },
+  breakdownSection: {
+    marginHorizontal: 20,
+    marginBottom: 20,
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    gap: 14,
+  },
+  breakdownList: { gap: 14 },
+  breakdownRow: { gap: 6 },
+  breakdownLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  breakdownDot: { width: 8, height: 8, borderRadius: 4 },
+  breakdownLabel: { flex: 1, fontFamily: 'Inter_500Medium', fontSize: 13 },
+  breakdownPct: { fontFamily: 'Inter_600SemiBold', fontSize: 13 },
+  breakdownTrack: { height: 6, borderRadius: 3, overflow: 'hidden' },
+  breakdownFill: { height: '100%', borderRadius: 3 },
+  breakdownAmount: { fontFamily: 'Inter_400Regular', fontSize: 11 },
   tabsBar: {
     flexDirection: 'row',
     paddingHorizontal: 16,

@@ -25,6 +25,27 @@ create policy "Users can update their own profile"
 create policy "Users can insert their own profile"
   on public.profiles for insert with check (auth.uid() = id);
 
+-- Fellow organization members need to see each other's name/email/phone
+-- (member lists, loan cards, invite screens, etc. all join profiles).
+-- Without this, the SELECT policy above only lets you see your OWN
+-- profile row, so joins like:
+--   organization_members.select('*, profiles:profiles(name, email, phone)')
+-- silently return null for every member except yourself, and the app
+-- falls back to showing "Unknown" with blank email for everyone else.
+-- This depends on is_org_member() defined further down for the
+-- organizations table, so it's declared again here as a small inline
+-- EXISTS check to avoid a forward reference.
+drop policy if exists "Org co-members can view each other's profile" on public.profiles;
+create policy "Org co-members can view each other's profile"
+  on public.profiles for select using (
+    exists (
+      select 1
+      from public.organization_members om1
+      join public.organization_members om2 on om1.org_id = om2.org_id
+      where om1.user_id = auth.uid() and om2.user_id = profiles.id
+    )
+  );
+
 -- ─── Organizations ────────────────────────────────────────────
 create table if not exists public.organizations (
   id              uuid primary key default gen_random_uuid(),
@@ -167,6 +188,12 @@ create policy "Creator can view organization they created"
 drop policy if exists "Members can view their own membership" on public.organization_members;
 create policy "Members can view their own membership"
   on public.organization_members for select using (user_id = auth.uid());
+
+drop policy if exists "Members can view all memberships in their org" on public.organization_members;
+create policy "Members can view all memberships in their org"
+  on public.organization_members for select using (
+    public.is_org_member(org_id)
+  );
 
 drop policy if exists "Admins can view all memberships in their orgs" on public.organization_members;
 create policy "Admins can view all memberships in their orgs"
